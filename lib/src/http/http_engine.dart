@@ -12,11 +12,9 @@ abstract class HttpEngine {
 
   Locale _locale = null;
 
-  static HttpEngine _engine = _DioEngine();
+  static final HttpEngine engine = _DioEngine();
 
   Future<HttpResponse> execute(HttpRequest request);
-
-  static HttpEngine get engine => _engine;
 
   set locale(Locale locale) => _locale = locale;
 }
@@ -39,11 +37,11 @@ class _DioEngine extends HttpEngine {
     if(headers == null) {
       headers = Map();
     }
-    if(headers.containsKey("Accept-Language") && locale != null) {
+    if(!headers.containsKey("Accept-Language") && locale != null) {
       headers["Accept-Language"] = locale.toString();
     }
 
-    if(headers.containsKey("content-type")) {
+    if(!headers.containsKey("content-type")) {
       headers["content-type"] = "application/json";
     }
 

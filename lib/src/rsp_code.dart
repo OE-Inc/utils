@@ -9,6 +9,7 @@ class NetworkLocal {
   static const RSP_INVALID_USERID = -8;
   static const PARAM_ENCODE_ERROR = -9;
   static const SHARE_MUST_LOGIN = -10;
+  static const RSP_ERROR = -11;
 
   static const int NETWORK_FAILED = -11;
   static const int HTTP_FAILED = -12;
