@@ -2,8 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:futils/futils.dart';
-import 'package:futils/src/http/method.dart';
+import 'package:utils/utils.dart';
+import 'package:utils/src/http/method.dart';
 
 void main() {
 

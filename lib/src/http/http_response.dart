@@ -1,12 +1,12 @@
-import 'package:futils/src/rsp_code.dart';
+import '../rsp_code.dart';
 
 class HttpResponse {
 
-  static const int NETWORK_FAILED = NetworkLocal.NETWORK_FAILED;
-  static const int HTTP_FAILED = NetworkLocal.HTTP_FAILED;
-  static const int TIMEOUT = NetworkLocal.TIMEOUT;
-  static const int NO_RSP_CODE  = NetworkLocal.NO_RSP_CODE;
-  static const int NOT_JSON = NetworkLocal.RESPONSE_NOT_JSON;
+  static final int NETWORK_FAILED = RspCode.NetworkLocal.NETWORK_FAILED;
+  static final int HTTP_FAILED = RspCode.NetworkLocal.HTTP_FAILED;
+  static final int TIMEOUT = RspCode.NetworkLocal.TIMEOUT;
+  static final int NO_RSP_CODE  = RspCode.NetworkLocal.NO_RSP_CODE;
+  static final int NOT_JSON = RspCode.NetworkLocal.RESPONSE_NOT_JSON;
 
   int code;
   Map<String, List<String>> headers;

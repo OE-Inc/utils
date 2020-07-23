@@ -1,3 +1,3 @@
-# futils
+# utils
 
-A flutter util library
+A dart/flutter util library

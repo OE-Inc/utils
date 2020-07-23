@@ -1,16 +1,17 @@
 import 'dart:io';
 
-import 'package:better_log/betterlog.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:futils/src/http/http_request.dart';
-import 'package:futils/src/http/method.dart';
+
+import '../log.dart';
+import 'http_request.dart';
+import 'method.dart';
 
 import 'http_response.dart';
 
 abstract class HttpEngine {
 
-  Locale _locale = null;
+  Locale _locale;
 
   static final HttpEngine engine = _DioEngine();
 
@@ -45,12 +46,12 @@ class _DioEngine extends HttpEngine {
       headers["content-type"] = "application/json";
     }
 
-    var methodName = _getMethodName(request.method);
+    var methodName = request.method.name;
     var queryParams = request.queryParams;
     var url = request.url;
     var data = request.data;
 
-    BetterLog.v(_TAG, "Do http request [$seq]\nmethod: $methodName\nurl: $url\nqueryParameters: $queryParams\ndata: $data");
+    Log.v(_TAG, "Do http request [$seq] $methodName $url\nqueryParameters: $queryParams\ndata: $data");
 
     var myResponse = HttpResponse();
     try {
@@ -74,14 +75,13 @@ class _DioEngine extends HttpEngine {
 
       if(!(response.data is Map<String, dynamic>)) {
         myResponse.code = HttpResponse.NOT_JSON;
-        BetterLog.e(_TAG, "Finish http request[$seq] with error: Response is not json");
+        Log.e(_TAG, "Finish http request[$seq] with error: Response is not json");
         return myResponse;
       }
 
       myResponse.response = response.data;
-    } on DioError catch(e, s) {
-      var error = e as DioError;
-      BetterLog.e(_TAG, "Finish http request[$seq] with error: $e, stack: $s");
+    } on DioError catch(error, s) {
+      Log.e(_TAG, "Finish http request[$seq] with error: $error, stack: $s");
       switch(error.type) {
         case DioErrorType.SEND_TIMEOUT:
         case DioErrorType.CONNECT_TIMEOUT:
@@ -97,19 +97,10 @@ class _DioEngine extends HttpEngine {
       }
     } catch (e, s) {
       myResponse.code = HttpResponse.NETWORK_FAILED;
-      BetterLog.e(_TAG, "Finish http request[$seq] with error: $e, stack: $s");
+      Log.e(_TAG, "Finish http request[$seq] with error: $e, stack: $s");
     }
 
-    BetterLog.v(_TAG, "Finish http request[$seq], code: ${myResponse.code}\nheaders: ${myResponse.headers}\ndata:${myResponse.response}");
+    Log.v(_TAG, "Finish http request[$seq], code: ${myResponse.code}\nheaders: ${myResponse.headers}\ndata:${myResponse.response}");
     return myResponse;
   }
-}
-
-String _getMethodName(Method method) {
-  var string = method.toString();
-  var index = string.lastIndexOf(".");
-  if(index >= 0) {
-    string = string.substring(index + 1);
-  }
-  return string;
 }
