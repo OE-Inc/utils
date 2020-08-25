@@ -51,7 +51,7 @@ class _DioEngine extends HttpEngine {
     var url = request.url;
     var data = request.data;
 
-    Log.v(_TAG, "Do http request [$seq] $methodName $url\nqueryParameters: $queryParams\ndata: $data");
+    Log.v(_TAG, "Do http request [$seq] $methodName $url\nheaders: $headers\nqueryParameters: $queryParams\ndata: $data");
 
     var myResponse = HttpResponse();
     try {
