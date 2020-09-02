@@ -81,7 +81,7 @@ class _DioEngine extends HttpEngine {
 
       myResponse.response = response.data;
     } on DioError catch(error, s) {
-      Log.e(_TAG, "Finish http request[$seq] with error: $error, stack: $s");
+      Log.e(_TAG, "Finish http request[$seq] with DioError: $error, stack: $s");
       switch(error.type) {
         case DioErrorType.SEND_TIMEOUT:
         case DioErrorType.CONNECT_TIMEOUT:
@@ -93,6 +93,7 @@ class _DioEngine extends HttpEngine {
           myResponse.code = error.response.statusCode;
           break;
         default:
+          myResponse.code = HttpResponse.NETWORK_FAILED;
           break;
       }
     } catch (e, s) {
