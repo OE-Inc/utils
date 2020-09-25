@@ -1,5 +1,6 @@
 
 import 'package:better_log/betterlog.dart';
+import 'package:utils/src/error.dart';
 import 'package:utils/src/running_env.dart';
 
 class Log {
@@ -28,10 +29,10 @@ class Log {
     print("[$s] $tag $m");
   }
 
-  static a(String tag, String m) { return log(tag, m, ASSERT); }
-  static d(String tag, String m) { return log(tag, m, DEBUG); }
-  static v(String tag, String m) { return log(tag, m, VERBOSE); }
-  static i(String tag, String m) { return log(tag, m, INFO); }
-  static w(String tag, String m) { return log(tag, m, WARN); }
-  static e(String tag, String m) { return log(tag, m, ERROR); }
+  static a(String tag, String m, [dynamic e, dynamic stacktrace]) { return log(tag, e != null ? '$m ${errorMsg(e, stacktrace)}' : m, ASSERT); }
+  static d(String tag, String m, [dynamic e, dynamic stacktrace]) { return log(tag, e != null ? '$m ${errorMsg(e, stacktrace)}' : m, DEBUG); }
+  static v(String tag, String m, [dynamic e, dynamic stacktrace]) { return log(tag, e != null ? '$m ${errorMsg(e, stacktrace)}' : m, VERBOSE); }
+  static i(String tag, String m, [dynamic e, dynamic stacktrace]) { return log(tag, e != null ? '$m ${errorMsg(e, stacktrace)}' : m, INFO); }
+  static w(String tag, String m, [dynamic e, dynamic stacktrace]) { return log(tag, e != null ? '$m ${errorMsg(e, stacktrace)}' : m, WARN); }
+  static e(String tag, String m, [dynamic e, dynamic stacktrace]) { return log(tag, e != null ? '$m ${errorMsg(e, stacktrace)}' : m, ERROR); }
 }

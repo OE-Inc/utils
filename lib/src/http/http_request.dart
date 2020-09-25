@@ -12,6 +12,8 @@ class HttpRequest {
   int sendTimeout;
   int receiveTimeout;
 
+  bool get allowBody => method != Method.GET;
+
   HttpRequest(this.method, this.url, {
     this.headers,
     this.queryParams,

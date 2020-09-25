@@ -1,11 +1,11 @@
 
-import 'source_gen_ext.dart';
 import '../../error.dart';
 import '../annotation/enum.dart';
+import 'source_gen_ext.dart';
 
 class EnumFieldReplacer extends FieldReplacer {
 
-  EnumFieldReplacer(SimpleClassInfo clazz) : super(clazz) {
+  EnumFieldReplacer(SimpleClassInfo clazz) : super(clazz, allowDuplicateStaticValue: false, allowNullStaticValue: false) {
     fieldReplaced.insert(0, ['ENUM_FIELD_NAME__', (FieldElement f) {
       var m = f.firstMeta(EnumDefField);
       var name = m?.fieldValue('name');

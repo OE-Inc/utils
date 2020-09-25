@@ -17,7 +17,7 @@ class RspCode {
   static const ParamError = ParamErrorCode();
 
   static String defaultReason(int rspCode, [String message]) {
-    return I18N.localString('rspCode_$rspCode');
+    return I18N.localString((rspCode >= 0 ? 'rspCode' : "rspCode_") + '${rspCode >= 0 ? rspCode : -rspCode}');
   }
 
   static String dispMsg(int reason, [String message]) {
@@ -59,7 +59,7 @@ class NetworkLocalCode {
   final NETWORK_FAILED = -11;
   final HTTP_FAILED = -12;
   final TIMEOUT = -13;
-  final NOT_LOGIN = -13;
+  final NOT_LOGIN = -14;
 
   const NetworkLocalCode();
 }

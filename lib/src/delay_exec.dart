@@ -13,6 +13,8 @@ class DelayExec {
   int         _delayUnit = 0;
   Runnable    run;
 
+  bool        closed = false;
+
   ///
   /// If start + delay < 0, then it will not execute automatically.
   /// @param start initial first invoke starts.
@@ -25,6 +27,10 @@ class DelayExec {
     checkInvoke();
   }
 
+  close() {
+    closed = true;
+  }
+
   bool  runPushed = false;
   void checkRun() {
     runPushed = false;
@@ -32,6 +38,9 @@ class DelayExec {
   }
   
   void checkInvoke() {
+    if (closed)
+      return;
+
     int currMS = utc();
 
     if (_nextInvoke < 0)

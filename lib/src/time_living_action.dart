@@ -33,7 +33,7 @@ class TimeLivingAction {
 
   TimeLivingAction(this.endUtc, { this.interval = 0, this.startAction, this.endAction, this.intervalAction, }) {
     this.intervalAction = this.intervalAction ?? this.startAction;
-    this.startAction = this.startAction ?? this.intervalAction;
+    this.startAction = this.startAction;
 
     updateTimer();
   }
@@ -74,14 +74,18 @@ class TimeLivingAction {
     if (isDead) {
       Log.d(_TAG, "time living action already died.");
       endAction?.call(this, TimeLivingInvokeType.end, 0);
+      loopTimer?.cancel();
+      loopTimer = null;
       return;
     }
 
+    bool calledStart = false;
     if (startUtc == 0 || oldEndUtc <= utc()) {
       startUtc = utc();
 
       Log.d(_TAG, "time living action start.");
       startAction?.call(this, TimeLivingInvokeType.start, interval);
+      calledStart = true;
     }
 
     if (endAction != null) {
@@ -119,6 +123,9 @@ class TimeLivingAction {
       Log.d(_TAG, "interval timer beating.");
       intervalAction?.call(this, TimeLivingInvokeType.interval, interval);
     });
+
+    if (calledStart == false || intervalAction != startAction)
+      intervalAction?.call(this, TimeLivingInvokeType.interval, interval);
   }
 
   reset() {

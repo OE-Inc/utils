@@ -5,19 +5,24 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 import 'package:hex/hex.dart';
+import 'package:lpinyin/lpinyin.dart';
 import 'package:utils/src/simple_interface.dart';
-import 'package:utils/src/unit.dart';
-import 'error.dart';
 import 'package:uuid/uuid.dart';
+
+import 'error.dart';
+
+export 'package:meta/meta.dart';
 
 export 'bus.dart';
 export 'error.dart';
 
-export 'package:meta/meta.dart';
+const _TAG = "Utils";
 
 /// only used for IDE auto import helper.
 @deprecated
 class Utils { }
+
+const _zeroStr = "0000000000000000000000000000000000000000000000000000000000000000";
 
 extension IntUtils on int {
 
@@ -31,8 +36,6 @@ extension IntUtils on int {
       return bdw.toBytes().sublist(8 - size);
     }
   }
-
-  static const _zeroStr = "0000000000000000000000000000000000000000000000000000000000000000";
 
   /// width is half-byte width, not full-byte width.
   String hexString({ bool withOx = true, int width = -1, }) {
@@ -54,16 +57,16 @@ extension IntUtils on int {
     if (width > str.length && (width - str.length) < _zeroStr.length)
       str = _zeroStr.substring(0, width - str.length) + str;
 
-    var lStr;
     if (leading) {
+      var lStr;
       switch (radix) {
         case 2: lStr = '0b'; break;
         case 16: lStr = '0x'; break;
         default: lStr = '[Radix $radix]'; break;
       }
-    }
-
-    return leading ? "$lStr$str" : str;
+      return "$lStr$str";
+    } else
+      return str;
   }
 
   static const MAX_BITS = 64;
@@ -129,11 +132,27 @@ extension ByteUtils on Uint8List {
     }
   }
 
+  int toSignedInt(){
+    var offset = length * 8;
+    var val = toInt();
+
+    if (offset <= 0)
+      return val;
+
+    if (this[0] & 0x80 != 0) {
+      val &= ~(0x1 << (offset - 1));
+      var s = -1 << offset;
+      return val | s;
+    } else {
+      return val | (0x1 << (offset - 1));
+    }
+  }
+
   int toInt(){
     var bytes = this;
 
     if(bytes == null || bytes.isEmpty || bytes.length > 8) {
-      throw Exception("bytes length must be > 0 & < 8");
+      throw IllegalArgumentException("bytes length must be > 0 & < 8");
     }
     var length = bytes.length;
     int value = 0;
@@ -223,8 +242,14 @@ extension ByteUtils on Uint8List {
     return bs.bytes;
   }
 
-  String bitString({ bool withOb = true, }) {
+  String bitString({ bool withOb = true, int width = -1, bool cutTail = false, }) {
     var str = map((f) => f.bitString(withOb: false, width: 8)).join('');
+
+    if (width > str.length && (width - str.length) < _zeroStr.length)
+      str = _zeroStr.substring(0, width - str.length) + str;
+
+    if (cutTail && width > 0 && width < str.length)
+      str = str.substring(0, width);
 
     return withOb ? "0b$str" : str;
   }
@@ -301,6 +326,121 @@ extension StringExt on String {
 
     return substring(genStart, genEnd);
   }
+
+
+  localCompare(String r, [checkSeq = true]) {
+    if (r == null && this == null)
+      return 0;
+
+    if (r == null)
+      return 1;
+
+    return this.compareString(checkSeq: checkSeq).compareTo(r.compareString(checkSeq: checkSeq));
+  }
+
+  String compareString({ checkSeq = true, }) {
+    if (this == null)
+      return null;
+
+    var units = <int> [];
+
+    var full = trim().toLowerCase();
+
+    String name = full;
+    int seq;
+    var firstNoneNum = -1;
+
+    const MAX_NUM = 5;
+    if (checkSeq) {
+      /// MAX_NUM: [1, 4, 7, 11].
+      try {
+        var lastNoneNum = full.length - 1;
+        for (; lastNoneNum >= 0; --lastNoneNum) {
+          var code = full.codeUnitAt(lastNoneNum);
+          if (code < 0x30 || code > 0x39)
+            break;
+        }
+
+        var count = full.length - lastNoneNum - 1;
+        if (count > 0 && count <= MAX_NUM) {
+          var numTail = full.substring(lastNoneNum + 1);
+          seq = int.parse(numTail);
+          name = full.substring(0, lastNoneNum + 1);
+        }
+      } catch (e) {
+        // Log.w(_TAG, '');
+        seq = null;
+        name = full;
+      }
+
+      for (var idx = 0; idx < full.length; ++idx) {
+        if (idx >= MAX_NUM)
+          break;
+
+        var code = full.codeUnitAt(idx);
+
+        if (code < 0x30 || code > 0x39) { // not num
+          firstNoneNum = idx;
+          break;
+        }
+      }
+    }
+
+    if (firstNoneNum > 0) {
+      var headSeq = int.parse(name.substring(0, firstNoneNum));
+      units.add(0x0);
+
+      if (MAX_NUM >= 8)
+        units.add((headSeq >> 24) & 0xFFFF);
+      if (MAX_NUM >= 5)
+        units.add((headSeq >> 16) & 0xFFFF);
+      units.add(headSeq & 0xFFFF);
+
+      name = full.substring(firstNoneNum);
+    }
+
+    for (var unit in name.codeUnits) {
+      if (unit < 0xFF) {
+        units.add(unit);
+        continue;
+      }
+
+      try {
+        var py = PinyinHelper.getFirstWordPinyin(String.fromCharCode(unit));
+        units.addAll(py.codeUnits);
+      } catch (e) {
+        units.add(unit);
+      }
+    }
+
+    if (seq != null) {
+      units.add(0x0);
+
+      if (MAX_NUM >= 8)
+        units.add((seq >> 24) & 0xFFFF);
+      if (MAX_NUM >= 5)
+        units.add((seq >> 16) & 0xFFFF);
+      units.add(seq & 0xFFFF);
+    }
+
+    var str = String.fromCharCodes(units);
+
+    // print('compareString: seq: $seq, $this => $str.');
+    return str;
+  }
+
+  String get shortPinyin {
+    try {
+      return this == null ? null : PinyinHelper.getShortPinyin(this);
+    } catch(e) {
+      print("[ERROR] trans to pinyin failed: $this, error: ${errorMsg(e)}");
+      // Log.w(_TAG, "trans to pinyin failed: $this, error: ${errorMsg(e)}");
+      return this;
+    }
+  }
+
+  Uint8List get utf8Bytes => utf8.encode(this);
+  Uint8List get bytes => codeUnits.bytes;
 }
 
 extension IntListExt on List<int> {
@@ -387,20 +527,70 @@ extension ByteDataReaderExt on ByteDataReader {
 
 
 extension ListExt<E> on List<E> {
+
+  Set<K> uniqueField<K>([K Function(E) key]) {
+    Set<K> uq = {};
+
+    for (var e in this) {
+      var k = key != null ? key(e) : e;
+      uq.add(k);
+    }
+
+    return uq;
+  }
+
   List<E> unique<K>([K Function(E) key]) {
     Set uq = {};
 
     var list = <E>[];
     for (var e in this) {
       var k = key != null ? key(e) : e;
+
+      if (k == null) {
+        if (e != null)
+          list.add(e);
+
+        continue;
+      }
+
       if (uq.contains(k))
         continue;
 
+      uq.add(k);
       list.add(e);
     }
 
     return list;
   }
+
+  int getUsablePosition(int max, int pos(E e), bool usable(E e, int pos)) {
+    var items = unique(pos)..sort((l, r) => pos(l) - pos(r));
+
+    int p = 0;
+    for (var item in items) {
+      if (usable(item, p))
+        break;
+
+      ++p;
+    }
+
+    // print('getUsablePosition: $p, items: $items.');
+
+    return p < max ? p : -1;
+  }
+
+  Iterable<T> mapIndexed<T>(T f(E e, int index)) {
+    int idx = 0;
+    return map((e) => f(e, idx));
+  }
+
+  Stream<E> whereAsync(Future<bool> Function(E elem) where) async * {
+    for (var elem in this) {
+      if (await where(elem))
+        yield elem;
+    }
+  }
+
 }
 
 
@@ -458,7 +648,10 @@ void repeat(int times, int interval, dynamic Function() run) {
 final uuid = Uuid();
 
 
-void loopRun(int times, dynamic Function() run, { int interval = -1, }) async {
+Future<void> loopRun(int times, dynamic Function() run, { int interval = -1, int delayMs = -1, }) async {
+  if (delayMs > 0)
+    await delay(delayMs);
+
   while (times-- > 0) {
     var shouldContinue = run();
 

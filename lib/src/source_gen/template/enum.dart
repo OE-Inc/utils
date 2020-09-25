@@ -37,8 +37,9 @@ class CLASS_NAME__ extends Enum<CLASS_NAME__, ENUM_TYPE__> {
   static Map<String, CLASS_NAME__> get stringMap => _stringToVal;
   static Map<ENUM_TYPE__, CLASS_NAME__> get valueMap => _valToString;
 
-  static List<String> get keys => _stringToVal.keys;
-  static List<ENUM_TYPE__> get values => _valToString.keys;
+  static Iterable<String> get keys => _stringToVal.keys;
+  static Iterable<ENUM_TYPE__> get values => _valToString.keys;
+  static Iterable<CLASS_NAME__> get enums => _valToString.values;
 
   static String getString(ENUM_TYPE__ e) {
     return _valToString[e]?.name;
@@ -54,6 +55,20 @@ class CLASS_NAME__ extends Enum<CLASS_NAME__, ENUM_TYPE__> {
 
   @override
   CLASS_NAME__ fromSave(ENUM_TYPE__ col) => valueMap[col];
+
+  @override
+  CLASS_NAME__ fromJson(col) => stringMap[col] ?? valueMap[col] ?? CLASS_NAME__.fromString(col);
+
+  factory CLASS_NAME__.fromString(String val) {
+    var v = stringMap[val];
+
+    if (v == null) {
+      Log.e('CLASS_NAME__', 'fromString of invalid: $val.');
+      v = CLASS_NAME__(null, val);
+    }
+
+    return v;
+  }
 
   factory CLASS_NAME__.fromValue(ENUM_TYPE__ val) {
     var v = valueMap[val];

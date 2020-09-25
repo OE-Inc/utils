@@ -101,6 +101,15 @@ class ValueCacheMap<KEY, VAL> {
     return val;
   }
 
+  bool setIfNotExist(KEY key, VAL newVal) {
+    var old = get(key);
+    if (old != null)
+      return false;
+
+    set(key, newVal);
+    return true;
+  }
+
   VAL set(KEY key, VAL newVal) {
     if (key == null)
       return null;
@@ -132,7 +141,19 @@ class ValueCacheMap<KEY, VAL> {
     Pair<int, VAL> old = delInside(key);
     return old != null ? old.s : null;
   }
-  
+
+  void invalidateWhere(bool Function(KEY key, VAL val) where) {
+    for (var key in keys.toList()) {
+      var val = _values[key];
+      if (val == null)
+        continue;
+
+      if (!where(key, val.s)) {
+        delInside(key);
+      }
+    }
+  }
+
   bool containsKey(KEY key) { return _values.containsKey(key); }
   
   void clear() { _values.clear(); }
@@ -178,6 +199,7 @@ class ValueCacheMapAsync<KEY, VAL> extends ValueCacheMap<KEY, VAL> {
 
         setInside(key, val, currMS);
       }
+      // else print('key cached: $key');
     } else {
       var g = getter(key, null, 0);
       val = g is Future ? await g : g;
@@ -188,4 +210,9 @@ class ValueCacheMapAsync<KEY, VAL> extends ValueCacheMap<KEY, VAL> {
     return val;
   }
 
+}
+
+
+class SqlValueCacheMapAsync<KEY, VAL> extends ValueCacheMapAsync<KEY, VAL> {
+  SqlValueCacheMapAsync(int interval, getter) : super(interval, getter);
 }

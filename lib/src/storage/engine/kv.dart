@@ -51,13 +51,7 @@ class SqlTableImpKvStore<VALUE_TYPE, K1, K2, K3> extends SqlTableImp<VALUE_TYPE,
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getRawMap(SqlWhereObj where) {
-    // TODO: implement getRawMap
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> invalidCache({K1 k1, K2 k2, K3 k3, SqlWhereObj where}) {
+  Future<void> invalidCache(K1 k1, K2 k2, K3 k3, SqlWhereObj where) {
     // TODO: implement invalidCache
     throw UnimplementedError();
   }
@@ -69,8 +63,32 @@ class SqlTableImpKvStore<VALUE_TYPE, K1, K2, K3> extends SqlTableImp<VALUE_TYPE,
   }
 
   @override
-  Stream<VALUE_TYPE> keys(String keyCol, {K1 k1, K2 k2, K3 k3, SqlWhereObj where}) {
+  Stream<KEY_TYPE> keys<KEY_TYPE>(String keyCol, {K1 k1, K2 k2, K3 k3, SqlWhereObj where}) {
     // TODO: implement keys
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> multiGetRawMap(Iterable<SqlWhereObj> where, {bool transferMap = true}) {
+    // TODO: implement multiGetRawMap
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<int> multiRemove(Iterable<SqlWhereObj> values) {
+    // TODO: implement multiRemove
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<int> multiSet(Iterable<VALUE_TYPE> values, {bool allowReplace = true}) {
+    // TODO: implement multiSet
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Map<String, SqlColumnDef>> readCols() {
+    // TODO: implement readCols
     throw UnimplementedError();
   }
 
@@ -81,20 +99,20 @@ class SqlTableImpKvStore<VALUE_TYPE, K1, K2, K3> extends SqlTableImp<VALUE_TYPE,
   }
 
   @override
-  Future<int> set(VALUE_TYPE val) {
+  Future<int> set(VALUE_TYPE val, {bool allowReplace = true}) {
     // TODO: implement set
     throw UnimplementedError();
   }
 
   @override
   Future<int> setField<FIELD_TYPE>(String field, FIELD_TYPE fieldVal, {K1 k1, K2 k2, K3 k3, SqlWhereObj where}) {
-    // TODO: implement setFiled
+    // TODO: implement setField
     throw UnimplementedError();
   }
 
   @override
   Future<int> setFields(Map<String, dynamic> fields, {K1 k1, K2 k2, K3 k3, SqlWhereObj where}) {
-    // TODO: implement setFileds
+    // TODO: implement setFields
     throw UnimplementedError();
   }
 
@@ -111,14 +129,8 @@ class SqlTableImpKvStore<VALUE_TYPE, K1, K2, K3> extends SqlTableImp<VALUE_TYPE,
   }
 
   @override
-  Stream<VALUE_TYPE> values({K1 k1, K2 k2, K3 k3, SqlWhereObj where, VALUE_TYPE whereObj, }) {
+  Stream<VALUE_TYPE> values({K1 k1, K2 k2, K3 k3, SqlWhereObj where, VALUE_TYPE whereObj}) {
     // TODO: implement values
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<Map<String, SqlColumnDef>> readCols() {
-    // TODO: implement readCols
     throw UnimplementedError();
   }
 

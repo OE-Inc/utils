@@ -3,7 +3,9 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 
-abstract class BinaryProtocol {
+import 'storage/annotation/sql.dart';
+
+abstract class BinaryProtocol<T> extends SqlSerializable<Uint8List, T> {
   // static const DEF_BUF_SIZE = 256;
 
   Uint8List get bytes {
@@ -24,6 +26,22 @@ abstract class BinaryProtocol {
   void unpack(ByteDataReader buf);
 
   moreString() { return ''; }
+
+  @override
+  String toString() {
+    return "$runtimeType { ${moreString()} }";
+  }
+
+  @override
+  T fromSave(Uint8List col) {
+    return (this..parse(col)) as T;
+  }
+
+  @override
+  Uint8List toSave() {
+    return bytes;
+  }
+
 }
 
 class EmptyBinaryProtocol extends BinaryProtocol {

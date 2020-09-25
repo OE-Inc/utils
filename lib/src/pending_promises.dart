@@ -7,11 +7,36 @@ typedef ErrorHandler<KEY> = dynamic Function(KEY key);
 
 class PendingPromises<KEY, VALUE> {
 
+  // for common purpose.
+  static PendingPromises pendingTasks = PendingPromises();
+  static Map<String, bool> singleExecutingTasks = { };
+
   Map<KEY, List<Completer>>   pending = {};
   ErrorHandler<KEY>           error;
 
   List<KEY> keys() {
     return pending.keys.toList();
+  }
+
+
+  Future<T> singleExecute<T>(String key, int timeout, Future<T> getter()) async {
+    var executing = singleExecutingTasks[key];
+
+    if (executing == true) {
+      return PendingPromises.pendingTasks.wait(key, timeout);
+    }
+
+    singleExecutingTasks[key] = true;
+    try {
+      var r = await getter();
+      PendingPromises.pendingTasks.resolve(key, r);
+      return r;
+    } catch (e) {
+      PendingPromises.pendingTasks.reject(key, e);
+      rethrow;
+    } finally {
+      singleExecutingTasks.remove(key);
+    }
   }
 
   void enterErrorState(ErrorHandler<KEY> error, bool applyToExisted) {
@@ -39,7 +64,7 @@ class PendingPromises<KEY, VALUE> {
     }
   }
 
-  Future<V> wait<V extends VALUE>(KEY key, int timeout) {
+  Future<V> wait<V extends VALUE>(KEY key, int timeout, { String context, }) {
     ErrorHandler<KEY> handler = error;
     var err = handler != null ? handler(key) : null;
     if (err != null)
@@ -63,7 +88,7 @@ class PendingPromises<KEY, VALUE> {
           return;
 
         f.completeError(
-            TimeoutException("wait timeout($timeout ms) for: $key"));
+            TimeoutException("wait timeout($timeout ms) for: $key, context: $context."));
         list.remove(f);
       });
     }

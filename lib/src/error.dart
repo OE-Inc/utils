@@ -1,11 +1,25 @@
-abstract class ExceptionWithMessage implements Exception {
+
+extension ErrorExt on Error {
+  thrown() {
+    try {
+      throw this;
+    } catch (e) {
+      return e;
+    }
+  }
+}
+
+abstract class ExceptionWithMessage extends Error {
   final String msg;
   ExceptionWithMessage(this.msg);
 
-  String get typeString => '$runtimeType';
-
   @override
-  String toString() => "$typeString: $msg";
+  String toString() => "$runtimeType: $msg";
+}
+
+String errorMsg(e, [StackTrace trace]) {
+  if (e is Error) return "$e\n${e.stackTrace ?? trace ?? StackTrace.current}";
+  else return "$e\n${trace ?? StackTrace.current}";
 }
 
 class IllegalArgumentException extends ExceptionWithMessage {
@@ -19,18 +33,20 @@ class SqlException extends ExceptionWithMessage {
   SqlException(int code, String msg) : super(msg);
 
   @override
-  String toString() => "$typeString(code: $code): $msg";
+  String toString() => "$runtimeType(code: $code): $msg";
 }
 
-class RspCodeException implements Exception {
+class RspCodeException extends Error {
   final String  msg;
+  final String  reason;
+  final         data;
   final int     rspCode;
 
-  const RspCodeException(this.rspCode, [this.msg]);
+  RspCodeException(this.rspCode, { this.msg, this.reason, this.data });
 
   @override
   String toString() {
-    return "RspCodeException { rspCode: $rspCode, msg: $msg }";
+    return "$runtimeType { rspCode: $rspCode, reason: $reason, msg: $msg, data: $data, }";
   }
 }
 
@@ -38,15 +54,21 @@ class RuntimeException extends ExceptionWithMessage {
   RuntimeException(String msg) : super(msg);
 }
 
+class NoResourceException<T> extends ExceptionWithMessage {
+  T     device;
 
-class BinaryFormatError extends Error {
-  String message;
+  NoResourceException(String msg, this.device) : super(msg);
+}
+
+
+class BinaryFormatError<T> extends Error {
+  String  message;
 
   BinaryFormatError(this.message);
 
   @override
   String toString() {
-    return "BinaryFormatError: $message";
+    return "$runtimeType: $message";
   }
 }
 
@@ -57,6 +79,54 @@ class CryptoError extends Error {
 
   @override
   String toString() {
-    return "CryptoError, reason: $reason.";
+    return "$runtimeType, $reason";
+  }
+}
+
+
+class NoConnectionError extends Error {
+  String reason;
+
+  NoConnectionError(this.reason);
+
+  @override
+  String toString() {
+    return "$runtimeType, $reason";
+  }
+}
+
+
+class MessageBusyError<T> extends Error {
+  String  reason;
+  T       device;
+
+  MessageBusyError(this.reason, this.device);
+
+  @override
+  String toString() {
+    return "$runtimeType, $reason";
+  }
+}
+
+
+class PendingListFullError extends Error {
+  String reason;
+
+  PendingListFullError(this.reason);
+
+  @override
+  String toString() {
+    return "$runtimeType, $reason";
+  }
+}
+
+class PendingListCancelError extends Error {
+  String reason;
+
+  PendingListCancelError(this.reason);
+
+  @override
+  String toString() {
+    return "$runtimeType, $reason";
   }
 }

@@ -1,6 +1,6 @@
 name: utils
 description: Flutter/Dart utils.
-version: 1.0.2
+version: 2.0.0
 author: OeCore
 homepage: https://www.oecore.com
 
@@ -25,6 +25,14 @@ dependencies:
   shared_preferences: ^0.5.7+3
   uuid: ^2.1.0
 
+  package_info: '>=0.4.1 <2.0.0'
+  lpinyin: ^1.0.9
+
+  #网络状态
+  connectivity: '>=0.4.9 <2.0.0'
+
+  native_http:
+    git: https://github.com/w-rui/native_http.git
   better_log:
     git: git@projects.oecore.com:libs.dart/better_log.git
 

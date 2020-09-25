@@ -1,8 +1,8 @@
 
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:utils/src/storage/annotation/sql.dart';
+
 import '../../error.dart';
 import '../../pair.dart';
 import '../../utils.dart';
@@ -27,6 +27,10 @@ class SqlWhereItem {
 
   SqlWhereItem(this.op, this.col, this.value);
 
+  @override
+  String toString() {
+    return "($col $op $value)";
+  }
 }
 
 class SqlWhereObj {
@@ -39,6 +43,19 @@ class SqlWhereObj {
   List<SqlWhereItem>      where;
   List<String>            columns;
   String                  distinct;
+
+  bool isEmpty(Set<String> pk) {
+    var empty = offset == null && limit == null
+        && groupBys == null && orderBys == null
+        && noCkNormalWhere(pk)
+        && columns == null
+        && distinct == null
+    ;
+    // print('isEmpty, pk: $pk, where: $where(${noCkNormalWhere(pk)}), empty: $empty.');
+    return empty;
+  }
+
+  bool noCkNormalWhere(Set<String> pk) => where == null || where.isEmpty || !where.any((c) => !pk.contains(c.col));
 
   void first() { limit = 1; }
 
@@ -73,8 +90,12 @@ class SqlWhereObj {
     }
   }
 
-  void like(String op, String col, String val) {
-    compared(op, col, val);
+  void equal(String col, dynamic val) {
+    compared(SqlWhereItem.OP_EQUAL, col, val);
+  }
+
+  void like(String col, String val) {
+    compared(SqlWhereItem.OP_LIKE, col, val);
   }
 
   Pair<String, List> finalWhere(SqlTableInfo tableInfo, { bool withWhereWord = true, }) {
@@ -86,7 +107,9 @@ class SqlWhereObj {
         str += 'WHERE ';
 
       str += where.map((item) {
-        var val = tableInfo.columns[item.col].toSql(item.value);
+        var val = item.op == SqlWhereItem.OP_LIKE
+            ? item.value
+            : tableInfo.columns[item.col].toSql(item.value);
 
         if (val is Uint8List) {
           return "${item.col} ${item.op} x'${val.hexString(withOx: false)}'";
@@ -114,6 +137,11 @@ class SqlWhereObj {
     return Pair(str, args);
   }
 
+  @override
+  String toString() {
+    return "$runtimeType { offset: $offset, limit: $limit, columns: $columns, where: $where, distinct: $distinct, groupBys: $groupBys, orderBys: $orderBys, }";
+  }
+
 }
 
 abstract class SqlTableInfo<VALUE_TYPE> {
@@ -125,6 +153,8 @@ abstract class SqlTableInfo<VALUE_TYPE> {
   /// include ckd
   Map<String, SqlColumnDef>     pkd;
   List<String>                  pk, pkNoCk;
+  Set<String>                   pkNoCkSet;
+  Set<String>                   pkSet;
 
   Map<String, SqlColumnDef>     ckd;
   List<String>                  ck;
@@ -135,6 +165,7 @@ abstract class SqlTableInfo<VALUE_TYPE> {
   List<String>                  nk;
 
   Map<String, SqlColumnDef>     transformers;
+  Map<String, SqlColumnDef>     jsonTransformers;
   VALUE_TYPE                    template;
 
   SqlTableInfo(this.tableName, this.pk, int ckCount, this.template) {
@@ -163,6 +194,13 @@ abstract class SqlTableInfo<VALUE_TYPE> {
     this.transformers = {...this.columns}..removeWhere((k, v)
       => (v.transformer == null || v.transformer == SqlTransformer.raw)
           && v.fieldType != '$bool');
+
+    this.jsonTransformers = {...this.columns}..removeWhere((k, v)
+      => (v.transformer == null || v.transformer == SqlTransformer.raw)
+        && v.fieldType != '$Uint8List');
+
+    pkNoCkSet = pkNoCk.toSet();
+    pkSet = pk.toSet();
   }
 
   Map<String, SqlColumnDef> makeColumnDefine();
@@ -176,22 +214,49 @@ abstract class SqlTableInfo<VALUE_TYPE> {
     return fromSql(cols);
   }
 
-  Map<String, dynamic> fromSqlTransferMap(Map<String, dynamic> cols) {
+  Map<String, dynamic> fromSqlTransferMap(Map<String, dynamic> cols, { bool fromJson = false, bool noCopy = false, }) {
+    var transformers = fromJson ? jsonTransformers : this.transformers;
+
     if (transformers.isEmpty)
       return cols;
 
-    cols = Map.from(cols);
-    for (var key in transformers.keys) {
-      cols[key] = transformers[key].fromSql(cols[key]);
+    if (noCopy || cols.length > transformers.length) {
+      if (!noCopy) {
+        cols = Map.from(cols);
+      }
+
+      for (var key in transformers.keys) {
+        var trans = transformers[key];
+        var val = cols[key];
+        if (val == null)
+          continue;
+        cols[key] = fromJson ? trans.fromJson(val) : trans.fromSql(val);
+      }
+    } else {
+      cols = Map.from(cols);
+      for (var key in cols.keys) {
+        var trans = transformers[key];
+        if (trans == null)
+          continue;
+
+        var val = cols[key];
+        if (val == null)
+          continue;
+        cols[key] = fromJson ? trans.fromJson(val) : trans.fromSql(val);
+      }
     }
 
     return cols;
   }
 
-  Map<String, dynamic> toSqlTransfer(VALUE_TYPE val, { bool excludePk, }) {
-    Map<String, dynamic> cols = toSql(val);
+  Map<String, dynamic> toSqlTransfer(VALUE_TYPE val, { bool excludePk, bool toJson = false, }) {
+    return toSqlTransferMap(toSql(val), excludePk: excludePk, toJson: toJson);
+  }
 
-    print('transformers: $transformers.');
+  Map<String, dynamic> toSqlTransferMap(Map<String, dynamic> cols, { bool excludePk, bool toJson = false, }) {
+    var transformers = toJson ? jsonTransformers : this.transformers;
+
+    // print('transformers(toJson: $toJson): $transformers.');
     if (transformers.isEmpty)
       return cols;
 
@@ -201,7 +266,11 @@ abstract class SqlTableInfo<VALUE_TYPE> {
     }
 
     for (var key in transformers.keys) {
-      cols[key] = transformers[key].toSql(cols[key]);
+      var trans = transformers[key];
+      var val = cols[key];
+      if (val == null)
+        continue;
+      cols[key] = toJson ? trans.toJson(val) : trans.toSql(val);
     }
 
     return cols;
@@ -211,11 +280,11 @@ abstract class SqlTableInfo<VALUE_TYPE> {
   /// ck: collection key.
   /// nk: normal key, exclude ck/pk.
   /// for template, should only use pk.
-  SqlWhereObj getWhere(VALUE_TYPE part, bool withPk, bool withCk, bool withNk, { SqlWhereObj where, });
+  SqlWhereObj getWhere(VALUE_TYPE part, bool withPk, bool excludeCk, bool withNk, { SqlWhereObj where, });
 
   /// all columns compared.
-  SqlWhereObj simpleWhere(VALUE_TYPE part, { bool withPk = true, bool withCk = true, bool withNk = true, SqlWhereObj where, }) {
-    return getWhere(part, withPk ?? true, withCk ?? true, withNk ?? true, where: where);
+  SqlWhereObj simpleWhere(VALUE_TYPE part, { bool withPk = true, bool excludeCk = false, bool withNk = true, SqlWhereObj where, }) {
+    return getWhere(part, withPk ?? true, excludeCk ?? false, withNk ?? true, where: where);
   }
 
   String tableDefine() {

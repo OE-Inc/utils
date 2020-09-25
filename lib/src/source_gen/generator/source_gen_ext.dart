@@ -1,18 +1,17 @@
 import 'dart:io';
 
+import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:analyzer/dart/constant/value.dart';
 import 'package:build/build.dart';
 import 'package:utils/src/error.dart';
+import 'package:utils/src/simple_interface.dart';
 import 'package:source_gen/source_gen.dart';
 
-import 'package:utils/src/simple_interface.dart';
-
-export 'package:build/build.dart';
+export 'package:analyzer/dart/constant/value.dart';
 export 'package:analyzer/dart/element/element.dart';
 export 'package:analyzer/dart/element/type.dart';
-export 'package:analyzer/dart/constant/value.dart';
+export 'package:build/build.dart';
 export 'package:source_gen/source_gen.dart';
 
 extension StringExt on String {
@@ -150,11 +149,11 @@ class SimpleClassInfo {
     'where static list: ${clazz.fields.where((f) => f.isStatic).toList()}\n');
     // */
 
-    fieldElements = clazz.fields.where((f) => !f.isStatic).toList();
+    fieldElements = clazz.fields.where((f) => !f.isStatic && f.getter.isSynthetic).toList();
     fields = fieldElements.map((f) => f.name).toList();
     fieldElements.forEach((f) => fieldMap[f.name] = f);
 
-    staticFieldElements = clazz.fields.where((f) => f.isStatic).toList();
+    staticFieldElements = clazz.fields.where((f) => f.isStatic && f.getter.isSynthetic).toList();
     staticFields = staticFieldElements.map((f) => f.name).toList();
     staticFieldElements.forEach((f) => staticFieldMap[f.name] = f);
 
@@ -172,20 +171,38 @@ abstract class LineReplacer {
 
 class FieldReplacer extends LineReplacer {
   SimpleClassInfo clazz;
+  bool allowDuplicateStaticValue;
+  bool allowNullStaticValue;
 
-  List fieldReplaced = [
-    ['STATIC_FIELD_NAME__', (FieldElement f) => f.name],
-    ["STATIC_FIELD_TYPE__", (FieldElement f) => f.type.name],
-    ["STATIC_FIELD_VALUE__", (FieldElement f) {
-      var v = f.constValue();
-      return v is String ? '"$v"' : '$v';
-    }],
+  // [ ['string', replacer], ..., ]
+  List fieldReplaced;
+  Map  checkDup = { };
 
-    ['FIELD_NAME__', (FieldElement f) => f.name],
-    ["FIELD_TYPE__", (FieldElement f) => f.type.name],
-  ];
+  FieldReplacer(this.clazz, { this.allowDuplicateStaticValue = true, this.allowNullStaticValue = true, }) {
+    fieldReplaced = [
+      ['STATIC_FIELD_NAME__', (FieldElement f) => f.name],
+      ["STATIC_FIELD_TYPE__", (FieldElement f) => f.type.name],
+      ["STATIC_FIELD_VALUE__", (FieldElement f) {
+        var v = f.constValue();
+        if (v == null && !allowNullStaticValue) {
+          throw IllegalArgumentException('${clazz.className}.${f.name} == null, class: $clazz.');
+        }
 
-  FieldReplacer(this.clazz);
+        if (v != null && !allowDuplicateStaticValue) {
+          var existed = checkDup[v];
+          if (existed != null && existed != f.name)
+            throw IllegalArgumentException('${clazz.className}.${f.name} value is duplicated: $v, class: $clazz.');
+
+          checkDup[v] = f.name;
+        }
+
+        return v is String ? '"$v"' : '$v';
+      }],
+
+      ['FIELD_NAME__', (FieldElement f) => f.name],
+      ["FIELD_TYPE__", (FieldElement f) => f.type.name],
+    ];
+  }
 
   @override
   String replace(String line) {
@@ -236,7 +253,7 @@ abstract class CommonGeneratorForAnnotation<TYPE> extends GeneratorForAnnotation
       if (element is ClassElement)
         return defaultGenerator(element, annotation, buildStep);
     } catch (e, stacktrace) {
-      var str = "error: $e, $stacktrace";
+      var str = "error: ${errorMsg(e, stacktrace)}";
 
       print(str);
       return "CHECK_ERROR: \n/**\n$str\n*/";

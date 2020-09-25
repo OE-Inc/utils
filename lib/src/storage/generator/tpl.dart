@@ -28,14 +28,32 @@ class __MODEL_CLASS__ {
 
 extension __MODEL_CLASS__OrmExt on __MODEL_CLASS__ {
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson({ SqlTableInfo info, bool toJson = false }) {
+    Map<String, dynamic> m = {
       "PK_VAL__": this.PK_VAL__,
       "NK_VAL__": this.NK_VAL__,
     };
+
+    if (toJson) {
+      info = info ?? __MODEL_CLASS__TableInfo.builder;
+    }
+
+    if (info != null) {
+      m = info.toSqlTransferMap(m, toJson: toJson);
+    }
+
+    return m;
   }
 
-  void fromJson(Map<String, dynamic> m, { bool defaultNull = false }) {
+  void fromJson(Map<String, dynamic> m, { bool defaultNull = false, SqlTableInfo info, bool fromJson = false }) {
+    if (fromJson) {
+      info = info ?? __MODEL_CLASS__TableInfo.builder;
+    }
+
+    if (info != null) {
+      m = info.fromSqlTransferMap(m, fromJson: fromJson);
+    }
+
     this.PK_VAL__ = m["PK_VAL__"] ?? (defaultNull ? null : this.PK_VAL__);
     this.NK_VAL__ = m["NK_VAL__"] ?? (defaultNull ? null : this.NK_VAL__);
   }
@@ -55,6 +73,8 @@ extension __MODEL_CLASS__OrmExt on __MODEL_CLASS__ {
 
 
 class __MODEL_CLASS__TableInfo extends SqlTableInfo<__MODEL_CLASS__> {
+
+  static __MODEL_CLASS__TableInfo builder = __MODEL_CLASS__TableInfo(__MODEL_CLASS__());
 
   __MODEL_CLASS__TableInfo(__MODEL_CLASS__ template, { String tableName }): super(tableName ?? "__TABLE_NAME__", __PK_LIST__, __CK_COUNT__, template);
 

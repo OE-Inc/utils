@@ -3,6 +3,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:utils/src/enum.dart';
+
 import '../../utils.dart';
 
 const _TAG = "annotation/sql";
@@ -14,18 +16,36 @@ typedef FromSqlColumn<SQL_TYPE, VAL_TYPE> = VAL_TYPE Function(String key, SQL_TY
 abstract class SqlSerializable<SQL_TYPE, CLASS> {
   /// called before saving to database, transfer memory object to db type.
   SQL_TYPE toSave();
+
+  dynamic toJson() {
+    var val = toSave();
+    if (val is Uint8List) return base64Encode(val);
+    else if (val is Enum) return val.name;
+    return val;
+  }
+
   /// called after loading from database, and transfer to a memory object.
   /// NOTE: could returns a new instance if old instance is const.
   CLASS fromSave(SQL_TYPE col);
+
+  CLASS fromJson(dynamic col) {
+    if (SQL_TYPE == Uint8List) {
+      col = base64Decode(col);
+    } else if (this is Enum) {
+      throw UnimplementedError('Enum class should implement fromJson().');
+    }
+
+    return fromSave(col);
+  }
 
   const SqlSerializable();
 }
 
 class SqlSerializer<VAL_TYPE, SQL_TYPE> {
   /// called before saving to database, transfer memory object to db type.
-  SQL_TYPE Function(String key, VAL_TYPE col) toSave;
+  SQL_TYPE Function(String key, VAL_TYPE col, { bool toJson }) toSave;
   /// called after loading from database, and transfer to a memory object.
-  VAL_TYPE Function(String key, SQL_TYPE col) fromSave;
+  VAL_TYPE Function(String key, dynamic col, { bool fromJson, }) fromSave;
 
   SqlSerializer({ this.toSave, this.fromSave });
 }
@@ -135,7 +155,7 @@ class SqlColumnDef<SQL_TYPE, VAL_TYPE> {
 
       // case SqlTransformer.enumerate: return val.fromSave(null, val); break;
 
-      default: throw IllegalArgumentException("not support SqlTransformer: $transformer.");
+      default: throw IllegalArgumentException("not support sql SqlTransformer: $transformer, field: $field, fieldType: $fieldType, val: $col.");
     }
   }
 
@@ -152,7 +172,85 @@ class SqlColumnDef<SQL_TYPE, VAL_TYPE> {
 
       // case SqlTransformer.enumerate: return transfer.toSave(); break;
 
-      default: throw IllegalArgumentException("not support SqlTransformer: $transformer.");
+      default: throw IllegalArgumentException("not support sql SqlTransformer: $transformer, field: $field, fieldType: $fieldType, val: $val.");
+    }
+  }
+
+
+  dynamic fromJson(var val) {
+    try {
+      return _fromJson(val);
+    } catch (e) {
+      print('[ERROR] $table fromJson error field: $field, type: $type/$transformer, fieldType: $fieldType, val(${val.runtimeType}): $val\n  error: ${errorMsg(e)}');
+      rethrow;
+    }
+  }
+
+  dynamic _fromJson(var val) {
+    if (val == null)
+      return val;
+
+    if (fieldType == 'Uint8List') {
+      // return val = base64Decode(val);
+      // TODO: should transfer
+      return val = val is String ? base64Decode(val) : Uint8List.fromList((val as List).map((v) => v as int).toList());
+    }
+
+    if (transformer == null)
+      return val;
+
+    switch (transformer) {
+      case SqlTransformer.json: {
+        // TODO: type transfer.
+        if (fieldType.startsWith('Map<String, dynamic>')) return Map<String, dynamic>.from(val);
+        else if (fieldType.startsWith('List')) {
+          if (fieldType == 'List<int>') return List<int>.from(val);
+          if (fieldType == 'List<double>') return List<double>.from(val);
+          else if (fieldType == 'List<String>') return List<String>.from(val);
+          else if (fieldType == 'List<dynamic>') return List.from(val);
+        } else return val;
+      } break;
+      case SqlTransformer.hex: return ByteUtils.fromHexString(val);
+      case SqlTransformer.base64: return base64Decode(val);
+
+      case SqlTransformer.sqlSerializable: return transfer.fromSave(name, val, fromJson: true); break;
+
+      default: throw IllegalArgumentException("not support json SqlTransformer: $transformer, field: $field, fieldType: $fieldType, val: $val.");
+    }
+  }
+
+  dynamic toJson(var val) {
+    try {
+      return _toJson(val);
+    } catch (e) {
+      print('[ERROR] $table toJson error field: $field, type: $type/$transformer, fieldType: $fieldType, val(${val.runtimeType}): $val.');
+      rethrow;
+    }
+  }
+
+  dynamic _toJson(var val) {
+    if (val == null)
+      return val;
+
+    if (fieldType == 'Uint8List') {
+      return base64Encode(val);
+    }
+
+    if (val is Enum) {
+      return val.value is int ? val.value : val.name;
+    }
+
+    if (transformer == null)
+      return val;
+
+    switch (transformer) {
+      case SqlTransformer.json: return val;
+      case SqlTransformer.hex: return (val as Uint8List).hexString();
+      case SqlTransformer.base64: return base64Encode(val);
+
+      case SqlTransformer.sqlSerializable: return (val as SqlSerializable).toJson();
+
+      default: throw IllegalArgumentException("not support json SqlTransformer: $transformer, field: $field, fieldType: $fieldType, val: $val.");
     }
   }
 }

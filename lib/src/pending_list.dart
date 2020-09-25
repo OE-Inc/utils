@@ -7,29 +7,44 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:utils/src/unit.dart';
 
+import 'enum.dart';
 import 'log.dart';
 import 'qpt.dart';
 import 'utils.dart';
 
 const String _TAG = 'PriorityPendingList';
 
-abstract class PriorityPendingItem {
-  int get     priority => 0;
+abstract class PriorityPendingItem<ENUM extends EnumInt> {
+  ENUM        priority;
   int         createUtc = utc();
   int         timeout;
+  Error       error;
+  bool        completed = false;
 
-  List<Completer<bool>> waiting = [];
+  List<Completer<void>> waiting = [];
 
   Future<void> start();
 
-  void onComplete(bool success) {
-    waiting.forEach((w) => w.complete(success));
+  void onComplete(error) {
+    if (completed)
+      Log.e(_TAG, "$runtimeType already completed: $this.", RuntimeException("never complete twice.").thrown());
+
+    completed = true;
+    error = error;
+    waiting.forEach((w) => error == null ? w.complete(null) : w.completeError(error));
     waiting.clear();
   }
 
   Future<bool> waitComplete() {
     var c = Completer<bool>();
-    waiting.add(c);
+
+    if (completed) {
+      error != null
+          ? c.completeError(error)
+          : c.complete(null);
+    } else
+      waiting.add(c);
+
     return c.future;
   }
 
@@ -43,44 +58,90 @@ abstract class PriorityPendingItem {
 
   @override
   String toString() {
-    return '$runtimeType { priority: $priority, expired: ${expired()}, duration: ${TimeUnit.readable(duration)}, ${moreString()}, timeout: $timeout, }';
+    return '$runtimeType { priority: $priority, expired: ${expired()}, duration: ${TimeUnit.periodString(duration)}, ${moreString()}, timeout: $timeout, }';
   }
 }
 
-class PriorityPendingList<ITEM extends PriorityPendingItem> {
+class PriorityPendingList<ENUM extends EnumInt, ITEM extends PriorityPendingItem<ENUM>> {
   @protected
-  SplayTreeMap<int, List<ITEM>>   pending = SplayTreeMap();
+  SplayTreeMap<ENUM, List<ITEM>>  pending = SplayTreeMap();
   @protected
   List<ITEM>                      processing = [];
-  @protected
-  int                             maxSize = 20;
+  int                             startUtc = 0;
 
+  SplayTreeMap<ENUM, int>         maxPrioritySize = SplayTreeMap();
+  int                             maxSize = 20;
   bool                            enableQpt = true;
   Qpt                             qpt = Qpt(10 * 1000);
+
+  bool Function(ENUM priority)    priorityAllowed;
 
   int _size;
   int get size => _size ?? (_size = pending.isEmpty ? 0 : pending.values.fold(0, ((val, item) => val + item.length)));
 
+
   @protected
-  List<ITEM> getList(int priority) {
+  List<ITEM> getList(ENUM priority) {
     return pending[priority] ?? (pending[priority] = []);
   }
 
-  bool remove(ITEM item) {
+  bool remove(ITEM item, { Error error, bool callOnRemove = true, }) {
     _size = null;
-    return pending[item.priority]?.remove(item);
+
+    bool r = pending[item.priority]?.remove(item);
+
+    if (callOnRemove == true)
+      _onRemoved(item, error);
+    Timer.run(() => item.onComplete(error));
+
+    return r;
+  }
+
+  void _onRemoved(ITEM item, Error e) {
+    try {
+      onRemoved(item, e);
+    } catch (e) {
+      Log.e(_TAG, "onRemove occurs error: ", e);
+    }
+  }
+
+  void onRemoved(ITEM item, Error e) {
+    return;
+  }
+
+  /// used to remove conflicted items.
+  void removeConflict(ITEM item) {
+    return;
   }
 
   Future<T> push<T extends ITEM>(ITEM item) async {
     var l = getList(item.priority);
+
+    removeConflict(item);
+
+    var maxPrSize = maxPrioritySize[item.priority];
+    if (maxPrSize != null) {
+      // remove the oldest.
+      while (maxPrSize <= l.length) {
+        var removed = l.removeAt(0);
+        if (removed == null)
+          continue;
+
+        // Log.w(_TAG, 'removed too many item: $removed.');
+        var e = PendingListFullError('priority list full.').thrown();
+        _onRemoved(removed, e);
+        Timer.run(() => removed.onComplete(e));
+      }
+    }
+
     _size = null;
     l.add(item);
     if (enableQpt) qpt.add();
 
     Log.d(_TAG, "push item: $item.");
 
-    if (size == 1 && processing.isEmpty)
-      next();
+    if (startUtc <= 0)
+      Timer.run(() => startUtc <= 0 ? start() : null);
 
     checkMaxSize();
 
@@ -92,9 +153,9 @@ class PriorityPendingList<ITEM extends PriorityPendingItem> {
     if (size <= maxSize)
       return;
 
-    var removed = [];
+    var removed = <ITEM>[];
 
-    int removedSize = 5;
+    int removedSize = 2;
     var keys = pending.keys.toList().reversed;
 
     for (var priority in keys) {
@@ -112,33 +173,33 @@ class PriorityPendingList<ITEM extends PriorityPendingItem> {
       l.removeRange(0, sz);
     }
 
+    var e = PendingListFullError('max list full.').thrown();
+    removed.forEach((r) {
+      _onRemoved(r, e);
+      Timer.run(() => r.onComplete(e));
+    });
+
     Log.w(_TAG, 'removing low priority list: $removed.');
   }
 
-  ITEM getNext({ bool remove = false }) {
-    List<int> removed;
+  ITEM getNext({ bool remove = false, bool retry = false, }) {
     ITEM t;
 
     for (var priority in pending.keys) {
       var l = pending[priority];
 
+      if (priorityAllowed != null && !priorityAllowed(priority)) {
+        if (!retry) Log.w(_TAG, "Priority not allowed: $priority.");
+        continue;
+      }
+
       if (l.isEmpty) {
-        if (remove == true) {
-          removed = removed ?? [];
-          removed.add(priority);
-        }
         continue;
       }
 
       t = l.removeAt(0);
+      _onRemoved(t, null);
       break;
-    }
-
-    if (removed != null) {
-      for (var p in removed)
-        pending.remove(p);
-
-      _size = null;
     }
 
     if (t != null)
@@ -147,36 +208,79 @@ class PriorityPendingList<ITEM extends PriorityPendingItem> {
     return t;
   }
 
-  @protected
-  onDone(ITEM item, bool success) {
-    Log.d(_TAG, "item result, success: $success, item: $item");
-    item.onComplete(success);
-    processing.remove(item);
-    next();
+  void start() async {
+    if (startUtc > 0)
+      throw RuntimeException("Should never call start() when already started.");
+
+    var sUtc = startUtc = utc();
+
+    try {
+      await _startLoop();
+
+      if (startUtc == sUtc)
+        startUtc = 0;
+    } catch (e) {
+      Log.e(_TAG, 'startLoop fail, retry in 2s, error: ', e);
+
+      delay(2000).then((_) => start());
+    }
   }
 
-  @protected
-  next() {
-    if (size == 0)
-      return;
+  Future<void> _startLoop() async {
+    var sUtc = startUtc;
+    bool retry = false;
+    while (true) {
+      if (size == 0) {
+        return;
+      }
 
-    var item = getNext();
-    Log.d(_TAG, "start item: $item");
+      if (startUtc != sUtc)
+        return;
 
-    // already timeout...
-    if (item.expired()) {
-      return next();
+      retry = await next(retry: retry);
     }
+  }
+
+  /// returns retry.
+  @protected
+  Future<bool> next({ bool retry = false }) async {
+    var item = getNext(retry: retry);
+
+    if (item == null) {
+      if (!retry) Log.w(_TAG, 'get item skipped, wait for next retry.');
+
+      await delay(50);
+      return true;
+    }
+
+    Log.d(_TAG, "start item: $item");
 
     processing.add(item);
 
-    item.start()
-        .then((_) => onDone(item, true))
-        .catchError((e, s) {
-          Log.e(_TAG, "process item error: $e, $s");
-          onDone(item, false);
-        });
-    ;
+    var error;
+    try {
+      // already timeout...
+      if (item.expired()) {
+        throw TimeoutException('item already expired.');
+      }
+
+      await item.start();
+      Log.d(_TAG, "item result success, item: $item");
+    } catch (e) {
+      Log.e(_TAG, "item result failed, item: $item, error: ", e);
+      error = e;
+    }
+
+    processing.remove(item);
+
+    Timer.run(() => item.onComplete(error));
+
+    return false;
+  }
+
+  @override
+  String toString() {
+    return "$runtimeType { qpt: $qpt, processing: ${processing.length}, pending: ${pending.keys.map((k) => "$k: ${pending[k].length}")}, }";
   }
 
 }

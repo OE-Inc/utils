@@ -2,13 +2,14 @@
 
 import 'dart:async';
 
+import 'package:path/path.dart';
 import 'package:utils/src/running_env.dart';
 import 'package:utils/src/simple_interface.dart';
 import 'package:utils/src/storage/annotation/sql.dart';
 import 'package:utils/src/storage/index.dart';
 import 'package:utils/src/storage/sql/table_info.dart';
+import 'package:socket_io_client/socket_io_client.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
 
 import '../../log.dart';
 import '../sqlike.dart';
@@ -77,7 +78,7 @@ class DatabaseProvider {
       version: version,
     )
         .catchError((e, stacktrace) {
-      Log.w(_TAG, 'initDb error: $e, $stacktrace');
+      Log.w(_TAG, 'initDb error: ${errorMsg(e, stacktrace)}');
       throw e;
     });
     Log.i(_TAG, "initialize database complete.");
@@ -140,9 +141,10 @@ class SqlTableImpSqlite<VALUE_TYPE, K1, K2, K3> extends SqlTableImp<VALUE_TYPE, 
     where = mergeWhere(k1: k1, k2: k2, k3: k3, where: where);
     var w = where.finalWhere(tableInfo, withWhereWord: false);
 
-    if (debug) Log.v(_TAG, 'clear table: $tableName.');
+    if (debug) Log.v(_TAG, 'clear table: DELETE $tableName WHERE $w.');
 
-    return db.delete(tableName, where: w.f, whereArgs: w.s);
+    invalidCache(k1, k2, k3, where);
+    return db.delete(tableName, where: w.f.isEmpty ? null : w.f, whereArgs: w.s);
   }
 
   @override
@@ -189,29 +191,73 @@ class SqlTableImpSqlite<VALUE_TYPE, K1, K2, K3> extends SqlTableImp<VALUE_TYPE, 
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getRawMap(SqlWhereObj where) async {
-    var w = where.finalWhere(tableInfo);
+  Future<List<Map<String, dynamic>>> multiGetRawMap(Iterable<SqlWhereObj> wheres, { bool transferMap = true, }) async {
+    if (wheres.isEmpty) {
+      // throw IllegalArgumentException('Should provide valid where array: $wheres');
+      return [];
+    }
 
-    var sel = (where.columns?.isNotEmpty??true ? '*' : where.columns.map((c) => '`$c`').join(','));
-    var distinct = where.distinct != null ? 'DISTINCT ' : '';
+    List<String> sqlAll = [];
+    List args = [];
 
-    var sql = 'SELECT $distinct$sel FROM `$tableName` ${w.f}';
-    if (debug) Log.v(_TAG, 'final SQL: $sql, args: ${toPrintableArgs(w.s)}');
+    for (var where in wheres) {
+      var w = where.finalWhere(tableInfo);
 
-    var result = await db.rawQuery(sql, w.s);
+      var sel = ((where.columns?.isNotEmpty ?? true) ? '*' : where.columns.map((c) => '`$c`').join(','));
+      var distinct = where.distinct != null ? 'DISTINCT ' : '';
+
+      var sql = 'SELECT $distinct$sel FROM `$tableName` ${w.f}';
+      sqlAll.add(sql);
+      args.addAll(w.s);
+    }
+
+    var sql = sqlAll.length == 1 ? sqlAll[0] : sqlAll.join('\n UNION\n');
+
+    if (debug) Log.v(_TAG, 'final SQL: $sql, args: ${toPrintableArgs(args)}');
+
+    var result = await db.rawQuery(sql, args);
 
     if (debug) Log.d(_TAG, 'getRaw() result: ${toPrintableResults(result)}.');
 
     if (result.isEmpty)
       return [];
 
-    return result.map((r) => tableInfo.fromSqlTransferMap(r)).toList();
+    return transferMap
+      ? result.map((r) => tableInfo.fromSqlTransferMap(r)).toList()
+      : result
+    ;
   }
 
   @override
-  Future<void> invalidCache({K1 k1, K2 k2, K3 k3, SqlWhereObj where}) async {
-    // TODO: should check for keys.
-    cached.clear();
+  Future<void> invalidCache(K1 k1, K2 k2, K3 k3, SqlWhereObj where) async {
+    if (isSingleKey(k1, k2, k3, where)) {
+      // if (debug) Log.d(_TAG, 'invalid single key: k1: $k1, k2: $k2, k3: $k3');
+      cached.invalidate(SqlCacheKey(k1, k2, k3));
+    } else {
+      // if (debug) Log.d(_TAG, 'invalid all key: k1: $k1, k2: $k2, k3: $k3, where: $where.');
+      cached.clear();
+    }
+
+    invalidFullCache();
+  }
+
+  Future<int> multiRemove(Iterable<SqlWhereObj> values) async {
+    var batch = db.batch();
+
+    var len = 0;
+    for (var where in values) {
+      var w = where.finalWhere(tableInfo);
+      var sql = 'DELETE FROM `$tableName` ${w.f}';
+      if (debug) Log.v(_TAG, 'final batch SQL: $sql，args: ${toPrintableArgs(w.s)}');
+
+      batch.rawDelete(sql, w.s);
+      ++len;
+    }
+
+    await batch.commit();
+
+    clearCache();
+    return len;
   }
 
   @override
@@ -226,19 +272,40 @@ class SqlTableImpSqlite<VALUE_TYPE, K1, K2, K3> extends SqlTableImp<VALUE_TYPE, 
 
     await db.execute(sql, w.s);
 
+    invalidCache(k1, k2, k3, where);
     return existed;
   }
 
   @override
+  Future<int>         multiSet(Iterable<VALUE_TYPE> values, { bool allowReplace = true, }) async {
+    var batch = db.batch();
+
+    var len = 0;
+    for (var val in values) {
+      var raw = rawInsert(val);
+
+      String sql = raw[0];
+      List<dynamic> args = raw[1];
+
+      if (debug) Log.v(_TAG, 'final batch SQL: $sql，args: ${toPrintableArgs(args)}');
+
+      batch.rawInsert(sql, args);
+      ++len;
+    }
+
+    await batch.commit();
+
+    clearCache();
+    return len;
+  }
+
+  @override
   Future<int> set(VALUE_TYPE val, { bool allowReplace = true, }) async {
-    var saved = tableInfo.toSqlTransfer(val);
-    var keys = saved.keys.toList();
-
-    var ins = (allowReplace ? "INSERT OR REPLACE INTO" : "INSERT INTO");
-
-    var sql = '$ins `$tableName` (${keys.map((f) => '`$f`').join(',')}) VALUES (${keys.map((f) => '?').join(',')})';
-    var args = keys.map((e) => saved[e]).toList();
-
+    var raw = rawInsert(val, allowReplace: allowReplace);
+    
+    String sql = raw[0];
+    List<dynamic> args = raw[1];
+    
     if (debug) Log.v(_TAG, 'final SQL: $sql，args: ${toPrintableArgs(args)}');
 
     var result = await db.rawInsert(sql, args);
@@ -248,10 +315,33 @@ class SqlTableImpSqlite<VALUE_TYPE, K1, K2, K3> extends SqlTableImp<VALUE_TYPE, 
     return result;
   }
 
+  List<dynamic> rawInsert(VALUE_TYPE val, { bool allowReplace = true, bool clearCache = true, }) {
+    var rawMap = tableInfo.toSql(val);
+    if (clearCache) {
+      invalidCache(rawMap[col1], rawMap[col2], rawMap[col3], null);
+    }
+
+    var saved = tableInfo.toSqlTransferMap(rawMap);
+    var keys = saved.keys.toList();
+
+    var ins = (allowReplace ? "INSERT OR REPLACE INTO" : "INSERT INTO");
+
+    var sql = '$ins `$tableName` (${keys.map((f) => '`$f`').join(',')}) VALUES (${keys.map((f) => '?').join(',')})';
+
+    var args = keys.map((e) {
+      var val = saved[e];
+      if (val == null && debug) Log.w(_TAG, 'insert/set null field: $e of ${tableInfo.tableName}.');
+
+      return val;
+    }).toList();
+
+    return [sql, args];
+  }
+
   Future<int> update(VALUE_TYPE val) async {
     var saved = tableInfo.toSqlTransfer(val, excludePk: true);
     var keys = saved.keys.toList();
-    var where = getWhere(val, true, true, false);
+    var where = getWhere(val, true, false, false);
     var w = where.finalWhere(tableInfo);
 
     var args = [...keys.map((k) => saved[k]), ...w.s];
@@ -276,6 +366,7 @@ class SqlTableImpSqlite<VALUE_TYPE, K1, K2, K3> extends SqlTableImp<VALUE_TYPE, 
 
     if (debug) Log.v(_TAG, 'final SQL: $sql, args: ${toPrintableArgs(args)}');
 
+    invalidCache(k1, k2, k3, where);
     return db.rawUpdate(sql, args);
   }
 
@@ -299,6 +390,7 @@ class SqlTableImpSqlite<VALUE_TYPE, K1, K2, K3> extends SqlTableImp<VALUE_TYPE, 
 
     if (debug) Log.v(_TAG, 'final SQL: $sql, args: ${toPrintableArgs(args)}');
 
+    invalidCache(k1, k2, k3, where);
     return db.rawUpdate(sql, args);
   }
 
@@ -306,6 +398,9 @@ class SqlTableImpSqlite<VALUE_TYPE, K1, K2, K3> extends SqlTableImp<VALUE_TYPE, 
   Future<int> size({K1 k1, K2 k2, K3 k3, SqlWhereObj where }) async {
     where = mergeWhere(k1: k1, k2: k2, k3: k3, where: where);
     var w = where.finalWhere(tableInfo);
+
+    if (fullCache != null && isAllKey(k1, k2, k3, where))
+      return fullCache.length;
 
     var distinct = where.distinct != null ? 'DISTINCT `${where.distinct}`' : '*';
 
@@ -344,19 +439,20 @@ class SqlTableImpSqlite<VALUE_TYPE, K1, K2, K3> extends SqlTableImp<VALUE_TYPE, 
   }
 
   @override
-  Stream<VALUE_TYPE> keys(String keyCol, {K1 k1, K2 k2, K3 k3, SqlWhereObj where}) async* {
-    if (where == null) {
-      where = SqlWhereObj();
-    }
+  Stream<KEY_TYPE> keys<KEY_TYPE>(String keyCol, { K1 k1, K2 k2, K3 k3, SqlWhereObj where }) async* {
+    where = mergeWhere(k1: k1, k2: k2, k3: k3, where: where,);
 
     where.columns = [...tableInfo.pk];
 
     if (!tableInfo.pk.contains(keyCol))
       where.columns.add(keyCol);
 
-    var r = await get(k1: k1, k2: k2, k3: k3, where: where);
-    for (var v in r) {
-      yield v;
+    var r = await getRawMap(where, transferMap: false);
+    var trans = tableInfo.transformers[keyCol];
+
+    for (var m in r) {
+      var v = m[keyCol];
+      yield (trans != null ? trans.fromSql(v) : v) as KEY_TYPE;
     }
   }
 

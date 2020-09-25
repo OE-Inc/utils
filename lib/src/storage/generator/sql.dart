@@ -1,17 +1,17 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:analyzer/dart/constant/value.dart';
 import 'package:build/build.dart';
 import 'package:utils/src/error.dart';
-import 'package:utils/src/utils.dart';
 import 'package:utils/src/storage/annotation/sql.dart';
 import 'package:utils/src/storage/sql/table_info.dart';
+import 'package:utils/src/utils.dart';
 import 'package:source_gen/source_gen.dart';
 
-const debug = false;
+const _debug = false;
 extension FieldExt on FieldElement {
 
   DartType returnTypeOfMethod(String method) {
@@ -31,7 +31,7 @@ extension FieldExt on FieldElement {
       }
     }
 
-    if (debug) print("toSave element: $toSave, return type: ${toSave?.type?.returnType}");
+    if (_debug) print("toSave element: $toSave, return type: ${toSave?.type?.returnType}");
 
     if (toSave == null)
       return null;
@@ -41,17 +41,21 @@ extension FieldExt on FieldElement {
 
 
   ElementAnnotation firstMeta(Type type) {
-    try {
-      return this.metadata.firstWhere((m) {
-        DartObject ccv = m.computeConstantValue();
-        if (debug) print('type: ${ccv.type}, elem: ${ccv.type.element}, is: ${ccv.type.isAssignableTypeOf(SqlColumnDef)}');
+    ElementAnnotation first;
+    var checkMeta = (m) {
+      DartObject ccv = m.computeConstantValue();
+      // print('getFirstMeta: $type, meta: $m, name: ${this.name}, type: ${ccv.type}, elem: ${ccv.type.element}, is: ${ccv.type.isAssignableTypeOf(type)}');
 
-        return ccv.type.isAssignableTypeOf(type);
-      });
-    } catch (e) {
-    }
+      return ccv.type.isAssignableTypeOf(type);
+    };
 
-    return null;
+    first = this.metadata.firstWhere(checkMeta, orElse: () => null)
+        ?? this.getter.metadata.firstWhere(checkMeta, orElse: () => null)
+        ?? this.setter.metadata.firstWhere(checkMeta, orElse: () => null);
+
+    print('name: $name, firstMeta: $type, first: $first, metas: ${this.metadata}, getterMeta: ${this.getter?.metadata}, setterMeta: ${this.setter?.metadata}');
+
+    return first;
   }
 
 
@@ -68,7 +72,7 @@ extension DartTypeExt on DartType {
   }
 
   bool isAssignableTypeOf(Type type) {
-    if (debug) print("isAssignableTypeOf: $type, dartType: $this.");
+    if (_debug) print("isAssignableTypeOf: $type, dartType: $this.");
     return TypeChecker.fromRuntime(type).isAssignableFromType(this);
   }
 
@@ -223,10 +227,12 @@ class SimpleTableInfo extends SqlTableInfo {
     Map<String, SqlColumnDef> map = {};
 
     for (var f in fields) {
-      if (debug) print("checking field: ${f.name}/${f.type.name}/${f.type.displayName}, $f, meta: ${f.metadata}");
+      if (_debug) print("checking field: ${f.name}/${f.type.name}/${f.type.displayName}, $f, meta: ${f.metadata}");
 
-      if (f.isConst || f.isFinal) {
-        continue;
+      if (f.isConst || f.isFinal || f.isStatic) {
+        if (!pk.contains(f.name)) {
+          continue;
+        }
       }
 
       if (excludeFields.contains(f.name))
@@ -253,7 +259,7 @@ class SimpleTableInfo extends SqlTableInfo {
       }
 
       String type = parseColType(def, f);
-      if (debug) print("parseColType: $type, from fieldType: ${f.type}.");
+      if (_debug) print("parseColType: $type, from fieldType: ${f.type}.");
 
       if (def == null) {
         def = SqlColumnDef(
@@ -321,7 +327,7 @@ SimpleTableInfo parseTableInfo(ClassElement element, ConstantReader annotation, 
   var className = element.name;
   var fields = element.fields;
   element.allSupertypes.forEach((s) {
-    if (debug) print("checking super: coreObj: ${s.isDartCoreObject}, obj: ${s.isObject} $s.");
+    if (_debug) print("checking super: coreObj: ${s.isDartCoreObject}, obj: ${s.isObject} $s.");
     if (s.isDartCoreObject || s.isObject)
       return;
 
@@ -405,7 +411,7 @@ String generate(String className, SimpleTableInfo tableInfo, String template) {
       }
 
       if (col.transformer == SqlTransformer.sqlSerializable) {
-        str += ', transfer: SqlSerializer<${f.type}, ${col.finalType}>(fromSave: (key, col) => ${f.type}.instance().fromSave(col))';
+        str += ', transfer: SqlSerializer<${f.type}, ${col.finalType}>(fromSave: (key, col, { bool fromJson = false, }) => fromJson ? ${f.type}.instance().fromJson(col) : ${f.type}.instance().fromSave(col))';
       }
 
       return str;
@@ -502,7 +508,7 @@ class SqlTableGenerator extends GeneratorForAnnotation<SqlTableDef> {
       if (element is ClassElement)
         return genOrmClass(element, annotation, buildStep);
     } catch (e, stacktrace) {
-      var str = "error: $e, $stacktrace";
+      var str = "error: ${errorMsg(e, stacktrace)}";
 
       print(str);
       return "CHECK_ERROR: \n/**\n$str\n*/";

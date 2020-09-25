@@ -6,18 +6,15 @@ class Pair <F, S> {
   Pair(this.f, this.s);
 
   @override
-  int get hashCode {
-    return f.hashCode | s.hashCode;
-  }
+  bool operator ==(Object other) =>
+      identical(this, other) || other is Pair && f == other.f && s == other.s;
+
+  @override
+  int get hashCode => f.hashCode ^ s.hashCode;
 
   @override
   String toString() {
     return "{ first: $f, second: $s }";
   }
 
-  @override
-  bool operator ==(r) {
-    return r == this
-    || (r is Pair<F, S> && f == r.f && s == r.s);
-  }
 }
