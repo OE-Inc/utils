@@ -167,7 +167,7 @@ class _NativeEngine extends HttpEngine {
         url: url,
         method: methodName,
         headers: headers ?? {},
-        body: request.allowBody ? {if (data != null) ...data, if (queryParams != null) ...queryParams} : {},
+        body: request.allowBody ? jsonEncode({if (data != null) ...data, if (queryParams != null) ...queryParams}).utf8Bytes : Uint8List(0),
       );
 
       myResponse.code = response.code;
