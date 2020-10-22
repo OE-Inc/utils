@@ -57,7 +57,7 @@ abstract class HttpEngine {
     var qs = {if (data != null) ...data, if (queryParams != null) ...queryParams};;
     if (qs.length > 0) {
       var allStringValue = qs.values.any((v) => v != null && !(v is String || v is num || v is bool));
-      request.url = "$url${url.contains('?') ? "&" : "?"}${allStringValue ? qs.toQuery().join('&') : "body=${jsonEncode(qs)}"}";
+      request.url = "$url${url.contains('?') ? "&" : "?"}${allStringValue ? qs.toQuery().join('&') : "body=${Uri.encodeQueryComponent(jsonEncode(qs))}"}";
     }
 
     // request.data = request.queryParams = null;
