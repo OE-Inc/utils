@@ -15,7 +15,6 @@ dependencies:
   dio: ^3.0.9
   sqflite: ^1.2.2
   hex: ^0.1.2
-  buffer: ^1.0.0
   json_serializable: ^3.0.0
   json_annotation: ^3.0.0
   jaguar_orm: ^2.0.0
@@ -31,6 +30,8 @@ dependencies:
   #网络状态
   connectivity: '>=0.4.9 <2.0.0'
 
+  buffer:
+    git: https://github.com/w-rui/buffer.git
   native_http:
     git: https://github.com/w-rui/native_http.git
   better_log:

@@ -1,4 +1,5 @@
 import 'dart:io';
+// import 'dart:mirrors'; // NOTE: this file should never imported by app, because it will import dart:mirrors from dependencies, .
 
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
