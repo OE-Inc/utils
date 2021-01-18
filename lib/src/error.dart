@@ -27,6 +27,10 @@ class IllegalArgumentException extends ExceptionWithMessage {
 }
 
 
+class TimeoutError extends ExceptionWithMessage {
+  TimeoutError(String msg) : super(msg);
+}
+
 class SqlException extends ExceptionWithMessage {
   int code;
 

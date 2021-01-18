@@ -127,12 +127,14 @@ class _DioEngine extends HttpEngine {
         case DioErrorType.RESPONSE:
           myResponse.code = error.response.statusCode;
           break;
+
         default:
+          myResponse.code = HttpResponse.NETWORK_FAILED;
           break;
       }
     } catch (e, s) {
       myResponse.code = HttpResponse.NETWORK_FAILED;
-      Log.e(_TAG, "Finish http request[$seq] with error: $e, stack: $s");
+      Log.e(_TAG, "Finish http request[$seq] with other error: $e, stack: $s");
     }
 
     Log.v(_TAG, "Finish http request[$seq], code: ${myResponse.code}\nheaders: ${myResponse.headers}\ndata:${myResponse.response}");
