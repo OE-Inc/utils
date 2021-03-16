@@ -19,7 +19,7 @@ class I18N {
     Locale l;
     try {
       if (AppEnv.context != null)
-        l = Localizations.localeOf(AppEnv.context, nullOk: true);
+        l = Localizations.maybeLocaleOf(AppEnv.context);
     } catch (e) {
       Log.w(_TAG, "get locale fail, use system locale, error:", e);
     }
