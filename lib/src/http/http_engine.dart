@@ -118,13 +118,13 @@ class _DioEngine extends HttpEngine {
     } on DioError catch(error, s) {
       Log.e(_TAG, "Finish http request[$seq] with error: $error, stack: $s");
       switch(error.type) {
-        case DioErrorType.SEND_TIMEOUT:
-        case DioErrorType.CONNECT_TIMEOUT:
-        case DioErrorType.RECEIVE_TIMEOUT:
+        case DioErrorType.sendTimeout:
+        case DioErrorType.connectTimeout:
+        case DioErrorType.receiveTimeout:
           myResponse.code = HttpResponse.TIMEOUT;
           break;
 
-        case DioErrorType.RESPONSE:
+        case DioErrorType.response:
           myResponse.code = error.response.statusCode;
           break;
 

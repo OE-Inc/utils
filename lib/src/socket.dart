@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:socket_io/socket_io.dart';
+// import 'package:socket_io/socket_io.dart';
 import 'package:socket_io_client/socket_io_client.dart' as Client;
 
 import 'log.dart';
@@ -96,6 +96,7 @@ class SocketClient extends SimpleSocket {
   }
 }
 
+/*
 class SocketServer extends SimpleSocket {
   Server          server;
   List<Socket>    sockets = [];
@@ -139,3 +140,5 @@ class SocketServer extends SimpleSocket {
     server.listen(port);
   }
 }
+
+ */

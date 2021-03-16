@@ -462,7 +462,7 @@ class SqlTableImpSqlite<VALUE_TYPE, K1, K2, K3> extends SqlTableImp<VALUE_TYPE, 
     if (debug) Log.v(_TAG, 'final SQL: $sql, args: ${toPrintableArgs(args)}');
 
     var result = await db.rawQuery(sql, args);
-    return result[0].values.first > 0;
+    return result[0].values.first as num > 0;
   }
 
   Future<void> createTable() async {

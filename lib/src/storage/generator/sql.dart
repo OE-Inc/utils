@@ -327,8 +327,8 @@ SimpleTableInfo parseTableInfo(ClassElement element, ConstantReader annotation, 
   var className = element.name;
   var fields = element.fields;
   element.allSupertypes.forEach((s) {
-    if (_debug) print("checking super: coreObj: ${s.isDartCoreObject}, obj: ${s.isObject} $s.");
-    if (s.isDartCoreObject || s.isObject)
+    if (_debug) print("checking super: coreObj: ${s.isDartCoreObject} $s.");
+    if (s.isDartCoreObject)
       return;
 
     fields.addAll(s.element.fields);

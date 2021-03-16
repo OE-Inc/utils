@@ -137,7 +137,7 @@ class SimpleClassInfo {
 
   SimpleClassInfo(this.clazz, this.annotation, this.buildStep) {
     className = clazz.name;
-    type = clazz.type;
+    type = clazz.thisType;
     typeName = type.name;
 
     /*

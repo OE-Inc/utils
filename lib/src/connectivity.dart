@@ -32,10 +32,6 @@ class ConnectivityDetector {
     bus.fire(result);
   }
 
-  Future<String> wifiBSSID() => _conn.getWifiBSSID();
-  Future<String> wifiIp() => _conn.getWifiIP();
-  Future<String> wifiName() => _conn.getWifiName();
-
 }
 
 ConnectivityDetector connectivityDetector = ConnectivityDetector();
