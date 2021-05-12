@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:native_http/native_http.dart';
 import 'package:utils/src/i18n.dart';
 import 'package:native_http/native_http.dart' as native_http;
 import 'package:utils/src/running_env.dart';
