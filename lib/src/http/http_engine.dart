@@ -164,7 +164,7 @@ class _NativeEngine extends HttpEngine {
     var url = request.url;
     var data = request.data;
 
-    Log.v(_TAG, () => "Do http request [$seq] $methodName $url\nheaders: $headers\nqueryParameters: $queryParams\ndata: $data");
+    Log.v(_TAG, "Do http request [$seq] $methodName $url\nheaders: $headers\nqueryParameters: $queryParams\ndata: $data");
 
     var myResponse = HttpResponse();
     try {
@@ -180,10 +180,10 @@ class _NativeEngine extends HttpEngine {
     } catch (e, s) {
       myResponse.code = HttpResponse.NETWORK_FAILED;
       myResponse.response = { 'reason': "$e", };
-      Log.e(_TAG, () => "Finish http request[$seq] with error: $e, stack: $s");
+      Log.e(_TAG, "Finish http request[$seq] with error: $e, stack: $s");
     }
 
-    Log.v(_TAG, () => "Finish http request[$seq], code: ${myResponse.code}\nheaders: ${myResponse.headers}\ndata:${myResponse.response}");
+    Log.v(_TAG, "Finish http request[$seq], code: ${myResponse.code}\nheaders: ${myResponse.headers}\ndata:${myResponse.response}");
     return myResponse;
   }
 }
