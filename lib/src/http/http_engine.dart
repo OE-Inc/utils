@@ -132,8 +132,11 @@ class _DioEngine extends HttpEngine {
           myResponse.code = HttpResponse.NETWORK_FAILED;
           break;
       }
+      myResponse.response = { 'reason': "$error", };
     } catch (e, s) {
       myResponse.code = HttpResponse.NETWORK_FAILED;
+      myResponse.response = { 'reason': "$e", };
+
       Log.e(_TAG, "Finish http request[$seq] with other error: $e, stack: $s");
     }
 
@@ -161,7 +164,7 @@ class _NativeEngine extends HttpEngine {
     var url = request.url;
     var data = request.data;
 
-    Log.v(_TAG, "Do http request [$seq] $methodName $url\nheaders: $headers\nqueryParameters: $queryParams\ndata: $data");
+    Log.v(_TAG, () => "Do http request [$seq] $methodName $url\nheaders: $headers\nqueryParameters: $queryParams\ndata: $data");
 
     var myResponse = HttpResponse();
     try {
@@ -176,10 +179,25 @@ class _NativeEngine extends HttpEngine {
       myResponse.response = response.getJson();
     } catch (e, s) {
       myResponse.code = HttpResponse.NETWORK_FAILED;
-      Log.e(_TAG, "Finish http request[$seq] with error: $e, stack: $s");
+      myResponse.response = { 'reason': "$e", };
+      Log.e(_TAG, () => "Finish http request[$seq] with error: $e, stack: $s");
     }
 
-    Log.v(_TAG, "Finish http request[$seq], code: ${myResponse.code}\nheaders: ${myResponse.headers}\ndata:${myResponse.response}");
+    Log.v(_TAG, () => "Finish http request[$seq], code: ${myResponse.code}\nheaders: ${myResponse.headers}\ndata:${myResponse.response}");
     return myResponse;
   }
+}
+
+
+class SimpleNativeHttpEngine {
+
+  static Future<NativeResponse> execute(String method, String url, { Map<String, String> headers, Uint8List body, }) {
+    return native_http.request(
+      url: url,
+      method: method,
+      headers: headers ?? {},
+      body: body ?? Uint8List(0),
+    );
+  }
+
 }
