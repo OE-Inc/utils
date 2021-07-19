@@ -30,7 +30,7 @@ extension MapQueryExt on Map {
 abstract class HttpEngine {
   var counter = 1;
 
-  static final HttpEngine engine = RunningEnv.isAndroid ? _DioEngine() : _NativeEngine();
+  static final HttpEngine engine = RunningEnv.isIOS ? _NativeEngine() : _DioEngine();
 
   void prepare(HttpRequest request, bool mergeQuery) {
     var headers = request.headers;
