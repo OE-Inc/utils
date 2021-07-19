@@ -126,7 +126,7 @@ class _DioEngine extends HttpEngine {
           break;
 
         case DioErrorType.response:
-          myResponse.code = error.response.statusCode;
+          myResponse.code = error.response?.statusCode ?? HttpResponse.HTTP_FAILED;
           break;
 
         default:
