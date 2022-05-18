@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:utils/utils.dart';
-import 'package:utils/src/http/method.dart';
 
 void main() {
 
@@ -39,7 +38,7 @@ void main() {
     } on DioError catch (e, s) {
       e.type;
       print(e);
-      print(e?.response?.statusCode);
+      print(e.response?.statusCode);
       print(s);
     } on Exception catch (e, s) {
       /*print(e);
