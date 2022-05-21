@@ -92,6 +92,10 @@ class RunningEnv {
     return Uri.base.queryParameters;
   }
 
+  static int? get androidSdkInt => cachedDeviceInfo.android?.version.sdkInt;
+
+  static final cachedDeviceInfo = DeviceInfo();
+
   static DeviceInfoPlugin? _deviceInfo;
   static DeviceInfoPlugin get deviceInfo {
     return _deviceInfo ??= DeviceInfoPlugin();
@@ -138,6 +142,17 @@ class RunningEnv {
     return _packageInfo;
   }
 
+  static Future<DeviceInfo> loadDeviceInfo() async {
+    cachedDeviceInfo.android = isAndroid ? await deviceInfo.androidInfo : null;
+    cachedDeviceInfo.ios = isIOS ? await deviceInfo.iosInfo : null;
+    cachedDeviceInfo.macos = isMacOS ? await deviceInfo.macOsInfo : null;
+    cachedDeviceInfo.linux = isLinux ? await deviceInfo.linuxInfo : null;
+    cachedDeviceInfo.windows = isWindows ? await deviceInfo.windowsInfo : null;
+    cachedDeviceInfo.web = isWeb ? await deviceInfo.webBrowserInfo : null;
+
+    return cachedDeviceInfo;
+  }
+
   static Future<void> _loadPackageInfo() async {
     try {
       var p = await PackageInfo.fromPlatform();
@@ -155,10 +170,47 @@ class RunningEnv {
 
   static init() async {
     _loadPackageInfo();
+    loadDeviceInfo();
 
     await I18N.init();
     // init connectivity here.
     connectivityDetector;
   }
 
+}
+
+
+class DeviceInfo {
+  AndroidDeviceInfo? android;
+  IosDeviceInfo? ios;
+  LinuxDeviceInfo? linux;
+  MacOsDeviceInfo? macos;
+  WindowsDeviceInfo? windows;
+  WebBrowserInfo? web;
+}
+
+class AndroidSdkInt {
+  static const
+    Android_4_4 = 19,
+    Android_4_4W = 20,
+    Android_5_0 = 21,
+    Android_5_1 = 22,
+    Android_6_0 = 23,
+
+    Android_7_0 = 24,
+    Android_7_1 = 25,
+
+    Android_8_0 = 26,
+    Android_8_1 = 27,
+
+    Android_9_0 = 28,
+    Android_10_0 = 29,
+
+    Android_11_0 = 30,
+    Android_12_0 = 31,
+    Android_12_L = 32,
+    Android_13_0 = 33,
+
+    _x_ = -1
+  ;
 }

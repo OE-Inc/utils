@@ -6,6 +6,7 @@ import 'package:utils/util/i18n.dart';
 import 'package:native_http/native_http.dart' as native_http;
 import 'package:utils/util/running_env.dart';
 import 'package:utils/util/storage/index.dart';
+import 'package:lehttp_overrides/lehttp_overrides.dart';
 
 import '../log.dart';
 import 'http_request.dart';
@@ -30,7 +31,11 @@ extension MapQueryExt on Map {
 abstract class HttpEngine {
   var counter = 1;
 
-  static final HttpEngine engine = RunningEnv.isIOS ? _NativeEngine() : _DioEngine();
+  static bool get shouldUseNativeEngine => RunningEnv.isIOS
+      || (RunningEnv.androidSdkInt ?? AndroidSdkInt.Android_8_0) <= AndroidSdkInt.Android_7_1
+  ;
+
+  static final HttpEngine engine = shouldUseNativeEngine ? _NativeEngine() : _DioEngine();
 
   void prepare(HttpRequest request, bool mergeQuery) {
     var headers = request.headers;
@@ -74,6 +79,10 @@ class _DioEngine extends HttpEngine {
   var _counter = 1;
 
   Dio _dio = Dio();
+
+  _DioEngine(): super() {
+    HttpOverrides.global = LEHttpOverrides();
+  }
 
   @override
   Future<HttpResponse> execute(HttpRequest request) async {

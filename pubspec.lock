@@ -273,6 +273,13 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "3.0.1"
+  coordtransform_dart:
+    dependency: "direct main"
+    description:
+      name: coordtransform_dart
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "1.0.0"
   crclib:
     dependency: "direct main"
     description:
@@ -510,7 +517,7 @@ packages:
       name: http_parser
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "4.0.0"
+    version: "4.0.1"
   intl:
     dependency: transitive
     description:
@@ -539,6 +546,13 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "4.5.0"
+  lehttp_overrides:
+    dependency: "direct main"
+    description:
+      name: lehttp_overrides
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "1.0.2"
   libusb:
     dependency: transitive
     description:

@@ -42,6 +42,9 @@ dependencies:
   battery_info: ^1.1.1
   screen_brightness: ^0.2.0
   volume_controller: ^2.0.3
+  # coordinate transform
+  coordtransform_dart: ^1.0.0
+  lehttp_overrides: ^1.0.2
 
   device_ext_info:
     git: https://github.com/w-rui/flutter-device-ext-info.git
