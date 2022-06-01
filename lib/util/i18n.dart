@@ -157,7 +157,7 @@ class I18N {
     return _systemLocale = Locale(codes.length == 0 ? "zh" : codes[0], codes.length > 1 ? codes[1] : "CN");
   }
 
-  final List<Locale> systemLocales = WidgetsBinding.instance!.window.locales;
+  final List<Locale> systemLocales = WidgetsBinding.instance.window.locales;
 
   /*
   // should put in mixin: WidgetsBindingObserver
