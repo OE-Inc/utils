@@ -81,7 +81,7 @@ class _DioEngine extends HttpEngine {
   Dio _dio = Dio();
 
   _DioEngine(): super() {
-    HttpOverrides.global = LEHttpOverrides();
+    if (!RunningEnv.isWeb) HttpOverrides.global = LEHttpOverrides();
   }
 
   @override
