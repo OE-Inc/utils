@@ -5,6 +5,7 @@
 import 'package:android_multicast_lock/android_multicast_lock.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:utils/util/bus.dart';
+import 'package:utils/util/running_env.dart';
 
 import 'log.dart';
 
@@ -20,8 +21,13 @@ class ConnectivityDetector {
   MulticastLock? multicastLock;
 
   ConnectivityDetector() {
-    _conn.onConnectivityChanged.listen(_onChange);
-    _conn.checkConnectivity().then(_onChange);
+    try {
+      _conn.onConnectivityChanged.listen(_onChange);
+      _conn.checkConnectivity().then(_onChange);
+    } catch (e) {
+      if (RunningEnv.isDebug) rethrow;
+      Log.e(_TAG, () => "ConnectivityDetector() error: ", e);
+    }
   }
 
   _onChange(ConnectivityResult result) {
