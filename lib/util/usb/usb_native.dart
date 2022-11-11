@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:utils/core/error.dart';
 import 'package:utils/util/storage/index.dart';
 
-import 'package:quick_usb/quick_usb.dart' as quick_usb;
+// import 'package:quick_usb/quick_usb.dart' as quick_usb;
 import 'package:utils/util/usb/usb.dart';
 
 import '../log.dart';
@@ -14,6 +14,8 @@ import '../log.dart';
 class UsbManager {
 
   static Future<List<UsbDevice>?> listDevices() async {
+    return null;
+    /*
     await quick_usb.QuickUsb.init();
 
     const _TAG = "UsbManager/QuickUsb";
@@ -25,6 +27,7 @@ class UsbManager {
     } finally {
       await quick_usb.QuickUsb.exit();
     }
+     */
   }
 
 }
@@ -107,7 +110,83 @@ class UsbDeviceWeb extends UsbDevice {
 
 }
 
+class UsbDeviceQuick extends UsbDevice {
+  UsbDeviceQuick(dynamic raw, bool isWeb): super.build(raw, isWeb);
 
+  @override
+  Future<void> claimInterface(UsbInterface interface) {
+    // TODO: implement claimInterface
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> close() {
+    // TODO: implement close
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<UsbConfiguration>?> getConfigurations() {
+    // TODO: implement getConfigurations
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<bool> hasPermission() {
+    // TODO: implement hasPermission
+    throw UnimplementedError();
+  }
+
+  @override
+  // TODO: implement identifier
+  String get identifier => throw UnimplementedError();
+
+  @override
+  Future<bool> open() {
+    // TODO: implement open
+    throw UnimplementedError();
+  }
+
+  @override
+  // TODO: implement productId
+  int get productId => throw UnimplementedError();
+
+  @override
+  Future<Uint8List> read(UsbEndpoint endpoint, int maxLength) {
+    // TODO: implement read
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> releaseInterface(UsbInterface interface) {
+    // TODO: implement releaseInterface
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> requestPermission() {
+    // TODO: implement requestPermission
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> selectConfiguration(UsbConfiguration configuration) {
+    // TODO: implement selectConfiguration
+    throw UnimplementedError();
+  }
+
+  @override
+  // TODO: implement vendorId
+  int get vendorId => throw UnimplementedError();
+
+  @override
+  Future<int> write(UsbEndpoint endpoint, Uint8List data) {
+    // TODO: implement write
+    throw UnimplementedError();
+  }
+}
+
+/*
 class UsbDeviceQuick extends UsbDevice<quick_usb.UsbDevice> {
   UsbDeviceQuick(dynamic raw, bool isWeb): super.build(raw, isWeb);
 
@@ -174,3 +253,5 @@ class UsbDeviceQuick extends UsbDevice<quick_usb.UsbDevice> {
   }
 
 }
+
+// */
