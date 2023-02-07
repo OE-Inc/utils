@@ -46,9 +46,6 @@ dependencies:
   coordtransform_dart: ^1.0.0
   lehttp_overrides: ^1.0.2
 
-  device_ext_info:
-    git: https://github.com/w-rui/flutter-device-ext-info.git
-
   buffer:
     git: https://github.com/w-rui/buffer.git
   native_http:
