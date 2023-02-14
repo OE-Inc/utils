@@ -2,6 +2,11 @@
 
 
 
+/*
+ * Copyright (c) 2019-2023 OE Technology (Shenzhen) Co., Ltd. All Right Reserved.
+ * Copyright (c) 2019-2023 偶忆科技（深圳）有限公司. All Right Reserved.
+ */
+
 import 'package:android_multicast_lock/android_multicast_lock.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:utils/util/bus.dart';

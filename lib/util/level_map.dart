@@ -1,5 +1,10 @@
 
 
+/*
+ * Copyright (c) 2019-2023 OE Technology (Shenzhen) Co., Ltd. All Right Reserved.
+ * Copyright (c) 2019-2023 偶忆科技（深圳）有限公司. All Right Reserved.
+ */
+
 class Level2Map<K1, K2, V> {
 
   Map<K1, Map<K2, V>> map = { };

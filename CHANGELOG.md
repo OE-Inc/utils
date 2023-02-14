@@ -1,3 +1,3 @@
-## [0.0.1] - TODO: Add release date.
+## [3.0.0] - sync to new api
 
-* TODO: Describe initial release.
+* to new api
