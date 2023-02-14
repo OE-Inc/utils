@@ -7,7 +7,7 @@
 import 'dart:typed_data';
 
 import 'package:ansicolor/ansicolor.dart';
-import 'package:better_log/betterlog.dart';
+import 'package:better_log/better_log.dart';
 import 'package:utils/core/error.dart';
 import 'package:utils/util/running_env.dart';
 
