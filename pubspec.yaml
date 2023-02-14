@@ -54,10 +54,8 @@ dependencies:
     git: https://github.com/w-rui/flutter_blue.git
   crclib:
     git: https://github.com/w-rui/crclib.dart.git
-  bt_broadcast:
-    git: git@projects.oecore.com:libs.dart/ripplink_linklayer.git
-  better_log:
-    git: git@projects.oecore.com:libs.dart/better_log.git
+  bt_broadcast: ^0.0.1
+  better_log: ^0.0.1
 #  utils:
 #    path: ../utils
 
