@@ -1,8 +1,8 @@
 
 
 /*
- * Copyright (c) 2019-2023 OE Technology (Shenzhen) Co., Ltd. All Right Reserved.
- * Copyright (c) 2019-2023 偶忆科技（深圳）有限公司. All Right Reserved.
+ * Copyright (c) 2019-2023 OE Technology (Shenzhen) Co., Ltd. All Rights Reserved.
+ * Copyright (c) 2019-2023 偶忆科技（深圳）有限公司. All Rights Reserved.
  */
 
 // ignore_for_file: non_constant_identifier_names, camel_case_extensions, camel_case_types, unused_element, unused_field
