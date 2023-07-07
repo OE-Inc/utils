@@ -12,7 +12,6 @@ import 'package:flutter_native_timezone/flutter_native_timezone.dart';
 import 'package:utils/util/app_env.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/data/latest_all.dart';
-import 'package:timezone/standalone.dart';
 import 'package:timezone/timezone.dart';
 
 import 'log.dart';
@@ -45,12 +44,13 @@ class I18N {
 
   static Future<void> initAfterPermissions() async {
     await initTimezone();
+    Log.d(_TAG, () => "initAfterPermissions locale: $locale, timezone: $localTimezoneName/$localTimezoneNullable, timezoneOffset: ${localTimezoneNullable?.offset} MS.");
   }
 
   static Future<void> init() async {
     initializeTimeZones();
     // await initTimezone();
-    Log.d(_TAG, () => "load locale: $locale, timezone: $localTimezoneName/$localTimezone, timezoneOffset: $localTimezoneOffset MS.");
+    Log.d(_TAG, () => "load locale: $locale, timezone: $localTimezoneName/$localTimezoneNullable, timezoneOffset: ${localTimezoneNullable?.offset} MS.");
   }
 
   static Map<String, Location> get timezoneList => timeZoneDatabase.locations;
@@ -61,7 +61,7 @@ class I18N {
    */
   static String tzI18nStringKey(String name) => '_tz_${name.replaceAll('/', "__").replaceAll('-', '_')}';
 
-  static String tzI18nName(String name) => localString(tzI18nStringKey(name));
+  static String tzI18nName(String? name) => name == null ? "" : localString(tzI18nStringKey(name))!;
 
   /// only for test.
   static bool? testUse24HourTimeFormat;
@@ -83,8 +83,9 @@ class I18N {
   static Locale get locale {
     Locale? l;
     try {
-      if (AppEnv.context != null)
+      if (AppEnv.context != null) {
         l = Localizations.maybeLocaleOf(AppEnv.context!);
+      }
     } catch (e) {
       Log.w(_TAG, () => "get locale fail, use system locale, error:", e);
     }
@@ -96,8 +97,10 @@ class I18N {
     return localTimezone.offset;
   }
 
+  static TimeZone? get localTimezoneNullable => _localTimezone == null ? null : tzLocation.currentTimeZone;
+
   static TimeZone get localTimezone => tzLocation.currentTimeZone;
-  static String get localTimezoneName => _localTimezone!;
+  static String? get localTimezoneName => _localTimezone;
 
   static int getTimezoneOffset(String? name, { int? utc, }) {
     return getTimezone(name, utc: utc).offset;
@@ -106,10 +109,11 @@ class I18N {
   static TimeZone getTimezone(String? name, { int? utc, }) {
     return getTzLocation(name).timeZone(utc ?? DateTime.now().millisecondsSinceEpoch);
   }
-  
+
   static Location getTzLocation(String? name) {
-    if (name == null)
+    if (name == null) {
       return tzLocation;
+    }
 
     try {
       return getLocation(name);
@@ -155,15 +159,16 @@ class I18N {
       Log.w(_TAG, () => "read Platform.localeName error, use default '$loc', error: $e.");
     }
 
-    if (_systemLocaleStr == loc && _systemLocale != null)
+    if (_systemLocaleStr == loc && _systemLocale != null) {
       return _systemLocale!;
+    }
 
     var codes = loc.split(RegExp(r'[_-]'));
 
     Log.i(_TAG, () => "systemLocale: $loc, splits: $codes.");
 
     _systemLocaleStr = loc;
-    return _systemLocale = Locale(codes.length == 0 ? "zh" : codes[0], codes.length > 1 ? codes[1] : "CN");
+    return _systemLocale = Locale(codes.isEmpty ? "zh" : codes[0], codes.length > 1 ? codes[1] : "CN");
   }
 
   final List<Locale> systemLocales = WidgetsBinding.instance.window.locales;
@@ -180,11 +185,12 @@ class I18N {
   }
    */
 
-  static String localString(String str, { String? locale, String? prefix, }) {
-    if (str == null)
+  static T localString<T>(T str, { String? locale, String? prefix, }) {
+    if (str == null) {
       return str;
+    }
 
-    var full = prefix != null ? "$prefix$str" : str;
+    var full = prefix != null ? "$prefix$str" : str as String;
 
     var result = Intl.message(
       full,
@@ -194,12 +200,12 @@ class I18N {
       locale: locale,
     );
 
-    return prefix != null && result == full ? str : result;
+    return (prefix != null && result == full ? str : result) as T;
   }
 }
 
 extension StringToI18nExt on String {
 
-  String get toI18n => I18N.localString(this);
+  String get toI18n => I18N.localString(this)!;
 
 }
