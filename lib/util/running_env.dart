@@ -173,9 +173,15 @@ class RunningEnv {
     }
   }
 
-  static init() async {
+  static initAfterPermissions() async {
     _loadPackageInfo();
+    // never auto call, just call when user login and term-permission allowed.
     loadDeviceInfo();
+    await I18N.initAfterPermissions();
+  }
+
+  static init() async {
+    // await initAfterPermissions();
 
     await I18N.init();
     // init connectivity here.

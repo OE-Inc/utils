@@ -43,9 +43,13 @@ class I18N {
     setLocalTimezone(nativeTz);
   }
 
+  static Future<void> initAfterPermissions() async {
+    await initTimezone();
+  }
+
   static Future<void> init() async {
     initializeTimeZones();
-    await initTimezone();
+    // await initTimezone();
     Log.d(_TAG, () => "load locale: $locale, timezone: $localTimezoneName/$localTimezone, timezoneOffset: $localTimezoneOffset MS.");
   }
 
