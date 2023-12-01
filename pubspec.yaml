@@ -53,8 +53,6 @@ dependencies:
     git: https://github.com/w-rui/buffer.git
   native_http:
     git: https://github.com/w-rui/native_http.git
-  flutter_blue:
-    git: https://github.com/w-rui/flutter_blue.git
   crclib:
     git: https://github.com/w-rui/crclib.dart.git
   bt_broadcast: ^0.0.1
