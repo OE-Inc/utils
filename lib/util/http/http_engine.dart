@@ -112,8 +112,8 @@ class _DioEngine extends HttpEngine {
             method: methodName,
             headers: headers,
             responseType: request.json ? ResponseType.json : ResponseType.bytes,
-            sendTimeout: request.sendTimeout,
-            receiveTimeout: request.receiveTimeout,
+            sendTimeout: request.sendTimeout == null ? null : Duration(milliseconds: request.sendTimeout!),
+            receiveTimeout: request.receiveTimeout == null ? null : Duration(milliseconds: request.receiveTimeout!),
           ),
           data: data,
           onSendProgress: request.onSendProgress ?? (count, total) { },
@@ -133,20 +133,21 @@ class _DioEngine extends HttpEngine {
 
         return rsp;
       }
-    } on DioError catch(error, s) {
+    } on DioException catch(error, s) {
       Log.e(_TAG, () => "Finish http request[$seq] with error: $error.");
       switch(error.type) {
-        case DioErrorType.sendTimeout:
-        case DioErrorType.connectTimeout:
-        case DioErrorType.receiveTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.receiveTimeout:
           rsp.code = HttpResponse.TIMEOUT;
           break;
 
-        case DioErrorType.cancel:
+        case DioExceptionType.cancel:
           rsp.code = HttpResponse.CANCEL;
           break;
 
-        case DioErrorType.response:
+        case DioExceptionType.badCertificate:
+        case DioExceptionType.badResponse:
           rsp.code = error.response?.statusCode ?? HttpResponse.HTTP_FAILED;
           break;
 
