@@ -27,11 +27,17 @@ class ConnectivityDetector {
 
   ConnectivityDetector() {
     try {
-      _conn.onConnectivityChanged.listen(_onChange);
-      _conn.checkConnectivity().then(_onChange);
+      _conn.onConnectivityChanged.listen(_onChangeList);
+      _conn.checkConnectivity().then(_onChangeList);
     } catch (e) {
       if (RunningEnv.isDebug) rethrow;
       Log.e(_TAG, () => "ConnectivityDetector() error: ", e);
+    }
+  }
+
+  _onChangeList(List<ConnectivityResult> results) {
+    for (var r in results) {
+      _onChange(r);
     }
   }
 
